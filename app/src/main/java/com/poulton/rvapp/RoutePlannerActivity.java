@@ -41,9 +41,9 @@ public final class RoutePlannerActivity extends Activity {
             if(computed!=null&&!computed.optString("Route stops").equals(encodedStops().toString()))computed=null;
         }catch(Exception e){points.clear();points.add(new JSONObject());points.add(new JSONObject());computed=null;}
         if(state!=null)mapIndex=state.getInt("mapIndex",-1);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(AdventureStyle.PAPER);setContentView(root);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(AdventureStyle.PAPER);setContentView(root);
         root.setOnApplyWindowInsetsListener((v,insets)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets b=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);}else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
-        ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(1);body.setPadding(dp(20),dp(18),dp(20),dp(24));scroll.addView(body);
+        ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(20),dp(18),dp(20),dp(24));scroll.addView(body);
         label(body,editId==0?"Plan a route":"Edit route plan",27,AdventureStyle.INK);
         label(body,RouteService.NOTICE,14,AdventureStyle.MUTED);
         name=field(body,"Plan name",state==null?saved.optString("Name"):state.getString("name",""),300);
@@ -55,7 +55,7 @@ public final class RoutePlannerActivity extends Activity {
         if(!selected.isEmpty()&&!names.contains(selected))names.add(selected);
         trip.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));trip.setSelection(Math.max(0,names.indexOf(selected)));body.addView(trip);
         trip.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){boolean first=true;public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(!first)dirty=true;first=false;}});
-        label(body,"Stops in travel order",20,AdventureStyle.INK);stopsView=new LinearLayout(this);stopsView.setOrientation(1);body.addView(stopsView);renderStops();
+        label(body,"Stops in travel order",20,AdventureStyle.INK);stopsView=new LinearLayout(this);stopsView.setOrientation(LinearLayout.VERTICAL);body.addView(stopsView);renderStops();
         add(body,"Add intermediate stop",()->{if(points.size()>=10){toast("Maximum 10 stops including start and destination");return;}points.add(points.size()-1,new JSONObject());invalidateRoute();renderStops();});
         label(body,"Calculate sends your chosen coordinates to OSRM’s public routing service. Internet required. Estimates exclude traffic and stop time.",13,AdventureStyle.MUTED);
         calculate=add(body,"Calculate road route",this::calculateRoute);
@@ -66,7 +66,7 @@ public final class RoutePlannerActivity extends Activity {
         notes=field(body,"Notes",state==null?saved.optString("Notes"):state.getString("notes",""),16000);notes.setSingleLine(false);notes.setMinLines(3);
         if(editId!=0)add(body,"Delete route plan",()->new AlertDialog.Builder(this).setMessage("Delete this saved route plan?").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{try(LogStore store=new LogStore(this)){store.delete(editId);}dirty=false;setResult(RESULT_OK);finish();}).show());
         LinearLayout actions=new LinearLayout(this);actions.setPadding(dp(16),dp(8),dp(16),dp(8));actions.setBackgroundColor(AdventureStyle.CARD);root.addView(actions);
-        Button back=add(actions,"Cancel",this::onBackPressed);save=add(actions,"Save plan",this::savePlan);back.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));save.setLayoutParams(new LinearLayout.LayoutParams(0,-2,2));save.setTextColor(AdventureStyle.CARD);save.setBackground(AdventureStyle.pressable(this,AdventureStyle.INK,0));
+        Button back=add(actions,"Cancel",this::onBackPressed);save=add(actions,"Save plan",this::savePlan);LinearLayout.LayoutParams backLp=new LinearLayout.LayoutParams(0,-2,1);backLp.setMargins(0,0,dp(10),0);back.setLayoutParams(backLp);save.setLayoutParams(new LinearLayout.LayoutParams(0,-2,2));save.setTextColor(AdventureStyle.CARD);save.setBackground(AdventureStyle.pressable(this,AdventureStyle.INK,0));
         updatePreview();dirty=state!=null&&state.getBoolean("dirty");
     }
     private EditText field(LinearLayout parent,String title,String value,int limit){
@@ -80,13 +80,13 @@ public final class RoutePlannerActivity extends Activity {
         stopsView.removeAllViews();
         for(int index=0;index<points.size();index++){
             final int i=index;JSONObject p=points.get(i);String role=i==0?"Start":i==points.size()-1?"Destination":"Stop "+i;
-            LinearLayout card=new LinearLayout(this);card.setOrientation(1);card.setPadding(dp(10),dp(4),dp(10),dp(8));card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.BORDER));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(5),0,dp(5));stopsView.addView(card,lp);
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(10),dp(4),dp(10),dp(8));card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.BORDER));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(5),0,dp(5));stopsView.addView(card,lp);
             add(card,role+" · "+p.optString("name","Choose a place"),()->chooseStop(p));
             if(p.has("lat"))label(card,String.format(Locale.UK,"%.5f, %.5f",p.optDouble("lat"),p.optDouble("lon")),12,AdventureStyle.MUTED);
             LinearLayout row=new LinearLayout(this);card.addView(row);
             Button map=add(row,"Map",()->{mapIndex=i;startActivityForResult(new Intent(this,TravelMapActivity.class).putExtra("pick_stop",true),60);});
             Button up=add(row,"Up",()->move(i,-1)),down=add(row,"Down",()->move(i,1)),remove=add(row,"Remove",()->{points.remove(i);invalidateRoute();renderStops();});up.setEnabled(i>0);down.setEnabled(i<points.size()-1);remove.setEnabled(points.size()>2);
-            for(Button b:new Button[]{map,up,down,remove}){b.setTextSize(12);LinearLayout.LayoutParams btn=new LinearLayout.LayoutParams(0,-2,1);btn.setMargins(dp(2),0,dp(2),0);b.setLayoutParams(btn);}
+            for(Button b:new Button[]{map,up,down,remove}){b.setTextSize(12);b.setAlpha(b.isEnabled()?1f:.4f);LinearLayout.LayoutParams btn=new LinearLayout.LayoutParams(0,-2,1);btn.setMargins(dp(2),0,dp(2),0);b.setLayoutParams(btn);}
         }
     }
     private void move(int index,int offset){Collections.swap(points,index,index+offset);invalidateRoute();renderStops();}
@@ -96,7 +96,7 @@ public final class RoutePlannerActivity extends Activity {
         }).setNegativeButton("Cancel",null).show();
     }
     private void coordinates(JSONObject target){
-        LinearLayout form=new LinearLayout(this);form.setOrientation(1);form.setPadding(dp(20),0,dp(20),0);EditText title=field(form,"Place name",target.optString("name"),300),lat=field(form,"Latitude",target.optString("lat"),30),lon=field(form,"Longitude",target.optString("lon"),30);
+        LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(20),0,dp(20),0);EditText title=field(form,"Place name",target.optString("name"),300),lat=field(form,"Latitude",target.optString("lat"),30),lon=field(form,"Longitude",target.optString("lon"),30);
         lat.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL|android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);lon.setInputType(lat.getInputType());
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Enter a stop position").setView(form).setNegativeButton("Cancel",null).setPositiveButton("Use stop",null).create();dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{try{double a=Double.parseDouble(lat.getText().toString()),b=Double.parseDouble(lon.getText().toString());if(!GeoData.valid(a,b))throw new IllegalArgumentException();setStop(target,title.getText().toString().trim(),a,b);dialog.dismiss();}catch(Exception e){lat.setError("Enter valid decimal coordinates");}}));dialog.show();
     }
@@ -129,7 +129,7 @@ public final class RoutePlannerActivity extends Activity {
         if(estimate==null)return;
         if(computed==null)estimate.setText(R.string.plan_needs_calculation);
         else estimate.setText(getString(R.string.route_estimate,computed.optString("Distance miles"),computed.optString("Drive minutes")));
-        if(save!=null)save.setEnabled(computed!=null&&!busy);
+        if(save!=null){save.setEnabled(computed!=null&&!busy);save.setAlpha(save.isEnabled()?1f:.45f);}
         if(mapReady){try{JSONObject data=new JSONObject().put("stops",encodedStops());if(computed!=null)data.put("segments",GeoData.parse(computed.getString("Route points")));map.evaluateJavascript("window.showPlan("+data+")",null);}catch(Exception ignored){}}
     }
     private void savePlan(){

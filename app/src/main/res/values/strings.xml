@@ -8,4 +8,5 @@
     <string name="calculating_route">Calculating road route…</string>
     <string name="plan_needs_calculation">Choose all stop positions and calculate to preview and save.</string>
     <string name="route_estimate">%1$s miles · %2$s minutes estimated driving\nExcludes traffic and stop time. RV suitability not checked.</string>
+    <string name="pick_route_stop">Choose route stop</string>
 </resources>

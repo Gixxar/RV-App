@@ -28,7 +28,7 @@ public final class TravelMapActivity extends Activity {
             if(Build.VERSION.SDK_INT>=30){Insets b=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);}
             else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;
         });
-        TextView title=new TextView(this);title.setText(pickingStop?"Choose route stop":"Travel map");title.setTypeface(AdventureStyle.DISPLAY);title.setTextSize(21);title.setTextColor(AdventureStyle.INK);title.setPadding(dp(12),dp(10),dp(12),dp(5));page.addView(title);
+        TextView title=new TextView(this);title.setText(pickingStop?R.string.pick_route_stop:R.string.travel_map_title);title.setTypeface(AdventureStyle.DISPLAY);title.setTextSize(21);title.setTextColor(AdventureStyle.INK);title.setPadding(dp(12),dp(10),dp(12),dp(5));page.addView(title);
         LinearLayout top=new LinearLayout(this);page.addView(top);control(top,"Back",this::finish);control(top,"Fit all",()->js("fitAll()"));control(top,"Find place",this::findPlace);
         LinearLayout tools=new LinearLayout(this);page.addView(tools);
         if(pickingStop)control(tools,"Choose stop on map",()->js("pickStop()"));
