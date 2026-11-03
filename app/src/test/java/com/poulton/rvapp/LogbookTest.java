@@ -82,7 +82,7 @@ public class LogbookTest {
             for (Module m:Module.values()) {
                 Button b=findButton(a.getWindow().getDecorView(),m==Module.REMINDERS?"Service reminders":m.title);
                 assertNotNull(m.title,b);b.performClick();
-                assertNotNull(findButton(a.getWindow().getDecorView(),"Add record"));
+                assertNotNull(findButton(a.getWindow().getDecorView(),m==Module.PLANS?"Plan a route":"Add record"));
                 findButton(a.getWindow().getDecorView(),"Home").performClick();
             }
         }

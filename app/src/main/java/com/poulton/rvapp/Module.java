@@ -2,6 +2,7 @@ package com.poulton.rvapp;
 
 /** Feature definitions shared by forms and storage. Keep persisted keys stable. */
 public enum Module {
+    PLANS("Route plans", new String[]{"Name", "Date", "Trip", "Route stops", "Route type", "Route points", "Distance miles", "Drive minutes", "Notes"}),
     PLACES("Places visited", new String[]{"Name", "Date", "Latitude", "Longitude", "Address", "Trip", "Notes"}),
     ROUTES("Routes travelled", new String[]{"Name", "Date", "Trip", "Route type", "Route points", "Notes"}),
     TRIPS("Trip logs", new String[]{"Name", "Date", "From", "To", "Start miles", "End miles", "Notes"}),
@@ -19,7 +20,7 @@ public enum Module {
     public boolean required(String field) {
         if (field.equals(fields[0])) return true;
         if (this == PLACES && (field.equals("Latitude") || field.equals("Longitude"))) return true;
-        if (this == ROUTES && (field.equals("Route type") || field.equals("Route points"))) return true;
+        if ((this == ROUTES || this == PLANS) && (field.equals("Route type") || field.equals("Route points"))) return true;
         return (this == MILEAGE && field.equals("Odometer miles")) ||
                ((this == FUEL || this == EXPENSES) && field.equals("Cost GBP"));
     }

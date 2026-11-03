@@ -15,6 +15,7 @@ final class LogbookIcon extends Drawable {
         switch(module) {
             case PLACES:
                 Path pin=symbol;pin.moveTo(16,30);pin.cubicTo(10,22,5,16,5,11);pin.cubicTo(5,-1,27,-1,27,11);pin.cubicTo(27,16,22,22,16,30);canvas.drawPath(pin,p);canvas.drawCircle(16,11,4,p);break;
+            case PLANS:
             case ROUTES:
                 canvas.drawCircle(7,6,3,p);canvas.drawCircle(25,26,3,p);Path route=symbol;route.moveTo(7,9);route.cubicTo(7,22,25,8,25,23);canvas.drawPath(route,p);break;
             case TRIPS:

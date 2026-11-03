@@ -1,6 +1,6 @@
 # The Poultons’ RV Logbook — Android
 
-An Android logbook for trips and vehicle care, with records saved offline and an online travel map. Runs on Android 8.0 and later. Miles, litres and GBP. No account, ads or automatic location tracking. Internet permission loads the map background and supports explicit place searches.
+An Android logbook for trips and vehicle care, with records saved offline and an online travel map. Runs on Android 8.0 and later. Miles, litres and GBP. No account, ads or automatic location tracking. Internet permission loads the map background, supports explicit place searches and sends selected stop coordinates to the road-routing service when you tap Calculate.
 
 ## Install on your Android phone
 
@@ -9,6 +9,18 @@ Download the signed development APK supplied with the build. Open it on your pho
 A GitHub build also places the APK under **Actions → Android → the successful run → Artifacts → Poultons-RV-Logbook-Android**. Download and unzip that artifact to find `app-debug.apk`.
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
+
+## Route planner (version 1.6)
+
+Open **Plan a route** on the overview or travel map, or **Records → Route plans**. Choose a start and destination, with up to eight intermediate stops (ten points total). Use address/postcode search, decimal coordinates, a point on the map, saved visited places, or a saved campsite name/address search. Confirm search results and campsite entrances. Reorder stops with Up/Down or remove them; the route follows the chosen order rather than optimizing it.
+
+Tap **Calculate road route** to request a road-following route, distance in miles and estimated driving minutes from [OSRM’s public car-routing server](https://github.com/Project-OSRM/osrm-backend/wiki/Demo-server). It requires internet and sends only selected coordinates to that service; address searches use the Android geocoding provider. Routing requests have a minimum 1.1-second interval, timeouts, a 4 MB response limit and a 20,000-point geometry limit. Stops must be matched to a road within 500 metres; choose a closer road entrance if a stop cannot be routed. Public service availability is not guaranteed. See [provider usage/privacy information](https://routing.openstreetmap.de/about.html).
+
+**These are car routes. RV height, width, weight, length, bridge clearances and access restrictions are not checked.** Driving estimates exclude traffic, breaks and time at stops. Check the route and restrictions for your RV before driving. There are no automatic toll/ferry avoidance controls, live traffic, route optimization or RV-specific routing in this version.
+
+Name the plan, optionally add a travel date, link a saved trip and add notes, then **Save plan**. Plans persist offline and appear as dashed blue lines in a separate **Route plans** layer on the travel map. Saving a plan does not create a visit or a travelled-route record. Editing stop positions/order clears the old preview and requires recalculation before saving; changing the name/date/trip/notes retains the calculated route. Cancel requires confirmation after changes. Rotation retains the route in memory; process recreation keeps stop/text fields but may require recalculation for an unsaved route.
+
+**Navigate a leg in Maps** opens the selected adjacent pair in Google Maps (or a browser). It may calculate a different route and uses its own routing rules; this is a handoff, not built-in turn-by-turn or RV-aware navigation. Saved plans can be reopened, edited and deleted. Backups include plans, stop order, geometry and estimates; backups containing plans require version 1.6 or later. Existing backups continue to restore into 1.6. The database schema and application ID stay the same, and the supplied installer retains the 1.3–1.5 signing key.
 
 ## Google Maps campsite lists (version 1.5)
 
