@@ -10,6 +10,14 @@ A GitHub build also places the APK under **Actions → Android → the successfu
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
 
+## Poster checklists (version 1.3)
+
+The dashboard now has **Pre-trip inspection checklist** (24 items) and **Arrival / setup checklist** (12 items), transcribed from the supplied poster in its displayed order. Each has its own saved ticks, notes, add/edit/delete controls, reset confirmation and dashboard progress. Resetting one list does not reset the other.
+
+The database upgrade replaces untouched, unchecked old starter entries with the poster items. Custom, renamed, checked or annotated checks are retained, and matching poster names are not duplicated. Reopening the app does not re-add checks you intentionally deleted. Restoring a pre-1.3 backup applies the same migration and adds arrival checks; current backups carry a template version so intentional deletions and ticks round-trip unchanged. Backups with the new arrival record type require version 1.3 or later.
+
+**Installer transition:** the temporary signing key used for supplied versions 1.0–1.2 was not retained. The supplied 1.3 APK therefore uses a new development key. If an earlier version is installed, export its JSON backup and keep original photos before uninstalling it, install 1.3, then restore that backup and reattach photos. The new key is retained separately for subsequent development updates; it must never be committed to this repository. For those builds, set `RV_APP_SIGNING_KEY` to the private `RV-App-development-signing-key.jks` file (standard development alias/password: `androiddebugkey` / `android`). CI without that key produces independently signed test APKs.
+
 ## Travel map (version 1.2)
 
 Open **Travel map · routes & visited places** on the dashboard.
@@ -26,7 +34,7 @@ Map code bundles Leaflet 1.9.4 and its licence under `app/src/main/assets/map`. 
 
 ## Adventure poster styling (version 1.1)
 
-The interface follows the supplied Poulton’s RV poster: original RV banner and crest, warm paper backgrounds, dark ink/forest-green section bars, gold borders/stars, condensed headings and RV-style footer stripes. The dashboard uses touch-sized feature cards and adapts to one column on narrow screens or larger font settings. All list screens, record forms, checkboxes, buttons and system-bar colours use the same palette. The update retains the application ID, database schema and signing key of the supplied 1.0 APK, allowing an in-place update with existing records preserved.
+The interface follows the supplied Poulton’s RV poster: original RV banner and crest, warm paper backgrounds, dark ink/forest-green section bars, gold borders/stars, condensed headings and RV-style footer stripes. The dashboard uses touch-sized feature cards and adapts to one column on narrow screens or larger font settings. All list screens, record forms, checkboxes, buttons and system-bar colours use the same palette. The 1.1 styling update retained the 1.0 application ID, database schema and signing key. For the later signing-key transition, see the version 1.3 instructions above.
 
 ## Features
 
@@ -35,7 +43,8 @@ The interface follows the supplied Poulton’s RV poster: original RV banner and
 | Travel map | Visited-place pins, GPX track/route imports, manual route drawing, trip filters, place search and external maps |
 | Dashboard | Recorded odometer, total fuel/expense/maintenance costs, due service count, departure progress |
 | Trip logs | Name, date picker, route, start/end odometer, notes; add, edit, delete |
-| Departure checklist | Eleven editable starter checks, custom checks, persistent tick state, confirmed reset |
+| Pre-trip inspection | 24 poster checks, custom checks, notes, saved tick state, independent reset |
+| Arrival / setup | 12 poster checks, custom checks, notes, saved tick state, independent reset |
 | Maintenance | Work, date, odometer, cost, provider and notes |
 | Service reminders | Due by date or mileage, completion history, optional repeat months/miles, daily Android notifications |
 | Fuel and expenses | Litres, odometer, station, cost, category, description |
@@ -76,7 +85,7 @@ Tests cover date/amount validation, due boundaries, SQLite persistence/edit/dele
 
 1. Install and launch. Add a mileage reading, a trip and maintenance work. Relaunch and verify saved records.
 2. Try an ending odometer lower than its start and a campsite departure before arrival; both must be rejected.
-3. Tick departure checks and reset them. Add a custom check. Verify its state after relaunch.
+3. Verify all 24 pre-trip and 12 arrival checks against the poster. Tick items in both lists; reset each independently. Edit notes, add a custom item and delete a default; verify those choices after relaunch and a backup/restore.
 4. Add a service due today and one due at the current mileage. Enable notification permission and confirm the due alert. Complete a repeating service and verify its next date/mileage.
 5. Add a photo, rotate while editing, save, relaunch and open it. Cancel a picker without losing your form.
 6. Export a backup. Restore it, confirming replacement, and verify records. Reattach the photo. Try a malformed backup and verify the existing data remains.
@@ -88,4 +97,4 @@ Tests cover date/amount validation, due boundaries, SQLite persistence/edit/dele
 
 One application module, Java 17, native Android views and SQLite, plus a restricted WebView with bundled Leaflet 1.9.4 for the travel map. `Module` defines stable persisted keys; `Rules` validates forms/imports; `LogStore` owns SQLite; `Backup` validates and transfers records; `ServiceNotifications` manages Android jobs/channels; `MainActivity` owns the logbook screens; `TravelMapActivity`, `GeoData` and `GpxImport` handle maps and route geometry.
 
-Database schema version 1 stores module-tagged JSON. Keep field keys stable; introduce explicit, non-destructive migrations before schema changes. Tests use JUnit 4 and Robolectric.
+Database schema version 2 stores module-tagged JSON; its non-destructive upgrade installs the poster checklists. `ChecklistTemplates` owns the transcribed defaults and migration rules. Keep field keys stable; introduce explicit, non-destructive migrations before schema changes. Tests use JUnit 4 and Robolectric.

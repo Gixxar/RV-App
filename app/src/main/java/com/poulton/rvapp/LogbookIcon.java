@@ -19,6 +19,7 @@ final class LogbookIcon extends Drawable {
                 canvas.drawCircle(7,6,3,p);canvas.drawCircle(25,26,3,p);Path route=symbol;route.moveTo(7,9);route.cubicTo(7,22,25,8,25,23);canvas.drawPath(route,p);break;
             case TRIPS:
                 canvas.drawLine(8,3,3,29,p);canvas.drawLine(24,3,29,29,p);canvas.drawLine(16,4,16,10,p);canvas.drawLine(16,15,16,20,p);canvas.drawLine(16,25,16,29,p);break;
+            case ARRIVAL:
             case CHECKS:
                 canvas.drawRoundRect(6,4,27,29,2,2,p);canvas.drawLine(11,10,13,12,p);canvas.drawLine(13,12,17,8,p);canvas.drawLine(20,10,23,10,p);canvas.drawLine(11,19,13,21,p);canvas.drawLine(13,21,17,17,p);canvas.drawLine(20,20,23,20,p);break;
             case MAINTENANCE:

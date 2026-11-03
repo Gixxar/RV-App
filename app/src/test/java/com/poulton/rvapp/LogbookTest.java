@@ -133,7 +133,7 @@ public class LogbookTest {
     }
     @Test public void checklistTickPersistsAndResetRequiresConfirmation() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()) {
-            MainActivity a=c.get();findButton(a.getWindow().getDecorView(),"Pre-departure").performClick();
+            MainActivity a=c.get();findButton(a.getWindow().getDecorView(),Module.CHECKS.title).performClick();
             findCheck(a.getWindow().getDecorView()).performClick();
             try(LogStore s=new LogStore(context)) {assertTrue(s.list(Module.CHECKS).get(0).data.optBoolean("done"));}
             findButton(a.getWindow().getDecorView(),"Reset all").performClick();
