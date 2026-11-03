@@ -10,8 +10,13 @@ public enum Module {
     CAMPSITES("Campsites", new String[]{"Name", "Address", "Arrival date", "Departure date", "Pitch", "Contact", "Facilities", "Notes"}),
     PHOTOS("Photos", new String[]{"Caption", "Date", "Trip or campsite", "Notes"}),
     MILEAGE("Mileage", new String[]{"Date", "Odometer miles", "Notes"}),
-    REMINDERS("Service reminders", new String[]{"Service", "Due date", "Due miles", "Notes"});
+    REMINDERS("Service reminders", new String[]{"Service", "Due date", "Due miles", "Repeat months", "Repeat miles", "Notes"});
 
+    public boolean required(String field) {
+        if (field.equals(fields[0])) return true;
+        return (this == MILEAGE && field.equals("Odometer miles")) ||
+               ((this == FUEL || this == EXPENSES) && field.equals("Cost GBP"));
+    }
     public final String title;
     public final String[] fields;
     Module(String title, String[] fields) { this.title = title; this.fields = fields; }

@@ -21,7 +21,7 @@ public final class LogStore extends SQLiteOpenHelper {
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE entries (id INTEGER PRIMARY KEY AUTOINCREMENT, module TEXT NOT NULL, data TEXT NOT NULL)");
         db.execSQL("CREATE INDEX entries_module ON entries(module)");
-        for (String item : new String[]{"Check tyres and lights", "Secure cupboards and loose items", "Disconnect shore power and water", "Retract steps and awning", "Check doors and roof vents"}) {
+        for (String item : new String[]{"Check tyres and lights", "Secure cupboards and loose items", "Disconnect shore power and water", "Retract steps and awning", "Check doors and roof vents", "Retract levelling jacks and check warning lights", "Retract slide-outs and secure travel locks", "Check engine oil, coolant and air pressure", "Check tyre pressures to vehicle specification", "Secure LPG and appliances for travel", "Walk around RV and check clearance"}) {
             JSONObject data = new JSONObject();
             try { data.put("Item", item); } catch (JSONException e) { throw new IllegalStateException(e); }
             ContentValues row = new ContentValues();
@@ -47,10 +47,26 @@ public final class LogStore extends SQLiteOpenHelper {
         else getWritableDatabase().update("entries", row, "id=? AND module=?", new String[]{String.valueOf(id), module.name()});
     }
     public void delete(long id) { getWritableDatabase().delete("entries", "id=?", new String[]{String.valueOf(id)}); }
+    public int dueCount() {
+        double miles = latestMileage();
+        int count = 0;
+        for (Entry e : list(Module.REMINDERS))
+            if (!e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"), e.data.optString("Due miles"), miles, java.time.LocalDate.now())) count++;
+        return count;
+    }
+    public double totalCost() {
+        double total = 0;
+        for (Module m : new Module[]{Module.FUEL, Module.EXPENSES, Module.MAINTENANCE})
+            for (Entry e : list(m)) total += e.data.optDouble("Cost GBP",0);
+        return total;
+    }
     public double latestMileage() {
         double miles = 0;
         for (Module m : new Module[]{Module.MILEAGE, Module.FUEL, Module.MAINTENANCE, Module.TRIPS})
-            for (Entry e : list(m)) miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : "Odometer miles", 0));
+            for (Entry e : list(m)) {
+                miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : "Odometer miles", 0));
+                if (m == Module.TRIPS) miles = Math.max(miles,e.data.optDouble("Start miles",0));
+            }
         return miles;
     }
 }
