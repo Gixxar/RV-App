@@ -10,6 +10,10 @@ A GitHub build also places the APK under **Actions → Android → the successfu
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
 
+## Adventure poster styling (version 1.1)
+
+The interface follows the supplied Poulton’s RV poster: original RV banner and crest, warm paper backgrounds, dark ink/forest-green section bars, gold borders/stars, condensed headings and RV-style footer stripes. The dashboard uses touch-sized feature cards and adapts to one column on narrow screens or larger font settings. All list screens, record forms, checkboxes, buttons and system-bar colours use the same palette. The update retains the application ID, database schema and signing key of the supplied 1.0 APK, allowing an in-place update with existing records preserved.
+
 ## Features
 
 | Area | Available behavior |
