@@ -110,7 +110,7 @@ public final class MainActivity extends Activity {
         section("Your data",AdventureStyle.GREEN);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("Backup & restore",this::backups);text("Version 1.4 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("Backup & restore",this::backups);text("Version 1.5 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -152,6 +152,7 @@ public final class MainActivity extends Activity {
     }
     private void list(Module module) {
         selected = module; draft = null; screen(module.title); TextView count=text(store.list(module).size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button("Add record", () -> editor(new JSONObject(),0));
+        if(module==Module.CAMPSITES)button("Import Google Maps list",this::campsiteImportHelp);
         if(module == Module.PLACES || module == Module.ROUTES){
             button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
             if(module==Module.ROUTES)button("Import GPX track",this::chooseGpx);
@@ -194,6 +195,7 @@ public final class MainActivity extends Activity {
                 try { startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(e.data.optString("uri")),"image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); }
                 catch (RuntimeException ex) { toast("Photo unavailable. Edit this record to choose it again."); }
             });
+            if(module==Module.CAMPSITES){String maps=CampsiteImport.link(e.data);if(maps!=null)button("Open in Google Maps",()->openWeb(maps));}
             button("Edit record", () -> editor(e.data,e.id));
             content = parent;
         }
@@ -280,6 +282,7 @@ public final class MainActivity extends Activity {
             else return;
             editor(record,0);return;
         }
+        if(request==42&&result==RESULT_OK&&data!=null&&data.getData()!=null){importCampsites(data.getData());return;}
         if(request==41&&result==RESULT_OK&&data!=null&&data.getData()!=null){importGpx(data.getData());return;}
         if ((request == 20 || request == 21) && result == RESULT_OK && data != null && data.getData() != null) {
             handleBackupResult(request,data.getData()); return;
@@ -363,6 +366,71 @@ public final class MainActivity extends Activity {
                     }).show();
             }
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
+    }
+    private void campsiteImportHelp(){
+        new AlertDialog.Builder(this).setTitle("Import Google Maps campsites")
+            .setMessage("1. Open Google Takeout and deselect all, then select Saved. Create a one-off ZIP export.\n\n2. Download the export to your phone. Choose its ZIP here, or an extracted campsite list CSV. If the ZIP has several lists, choose one.\n\n3. Review the campsites and confirm. Names, notes and Google Maps links are kept; matching links are skipped. Other saved websites are skipped. Existing records stay unchanged.\n\nThis is a file import, not live sync or a shared-list link importer. No visit dates or map pins are created. Add visited places separately on the travel map. Maximum 2,000 rows / 10 MB file / 20 MB expanded ZIP.")
+            .setNegativeButton("Cancel",null).setNeutralButton("Google Takeout",(d,w)->openWeb("https://takeout.google.com/"))
+            .setPositiveButton("Choose file",(d,w)->startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),42)).show();
+    }
+    private void openWeb(String url){
+        try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(RuntimeException e){toast("No app available to open this link.");}
+    }
+    private void importCampsites(Uri uri){
+        android.content.Context context=getApplicationContext();
+        AlertDialog loading=new AlertDialog.Builder(this).setTitle("Reading campsite lists…").setView(new ProgressBar(this)).setCancelable(false).show();
+        imports.execute(()->{
+            try(InputStream in=context.getContentResolver().openInputStream(uri)){
+                if(in==null)throw new java.io.IOException("File unavailable. Choose it again.");
+                String name="Saved places";
+                try(android.database.Cursor c=context.getContentResolver().query(uri,new String[]{android.provider.OpenableColumns.DISPLAY_NAME},null,null,null)){
+                    if(c!=null&&c.moveToFirst()&&!c.isNull(0))name=c.getString(0);
+                }catch(RuntimeException ignored){/* Display names are optional; the stream is authoritative. */}
+                java.util.List<CampsiteImport.SavedList> lists=CampsiteImport.read(in,name);
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;loading.dismiss();
+                    if(selected!=Module.CAMPSITES||draft!=null)return;
+                    if(lists.size()==1)previewCampsiteList(lists.get(0));
+                    else{
+                        String[] names=new String[lists.size()];for(int i=0;i<lists.size();i++){CampsiteImport.SavedList list=lists.get(i);names[i]=list.name+" · "+list.campsites.size()+" Maps places";}
+                        new AlertDialog.Builder(this).setTitle("Choose your campsite list").setItems(names,(d,index)->previewCampsiteList(lists.get(index))).setNegativeButton("Cancel",null).show();
+                    }
+                });
+            }catch(Exception e){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){loading.dismiss();campsiteImportError(e);}});}
+        });
+    }
+    void previewCampsiteList(CampsiteImport.SavedList saved){
+        CampsiteImport.Preview preview=CampsiteImport.preview(saved.campsites,store);
+        String summary=saved.name+"\n"+preview.fresh.size()+" new · "+preview.duplicates+" duplicate links · "+saved.skipped+" unsupported or incomplete rows skipped";
+        if(preview.fresh.isEmpty()){
+            new AlertDialog.Builder(this).setTitle("No new campsites").setMessage(summary+"\n\nNo changes made. Choose a list containing Google Maps places, or check your existing campsites.").setPositiveButton("Close",null).show();return;
+        }
+        String[] names=new String[preview.fresh.size()];boolean[] checked=new boolean[names.length];java.util.Arrays.fill(checked,true);
+        for(int i=0;i<names.length;i++)names[i]=preview.fresh.get(i).optString("Name");
+        LinearLayout title=new LinearLayout(this);title.setOrientation(LinearLayout.VERTICAL);title.setPadding(dp(24),dp(20),dp(24),dp(10));
+        TextView heading=new TextView(this);heading.setText(R.string.review_campsites);heading.setTextSize(20);heading.setTextColor(AdventureStyle.INK);heading.setTypeface(AdventureStyle.DISPLAY);title.addView(heading);
+        TextView detail=new TextView(this);detail.setText(getString(R.string.campsite_review_detail,summary));detail.setTextSize(14);detail.setTextColor(AdventureStyle.MUTED);detail.setPadding(0,dp(8),0,0);title.addView(detail);
+        AlertDialog dialog=new AlertDialog.Builder(this).setCustomTitle(title).setMultiChoiceItems(names,checked,(d,index,value)->{
+            checked[index]=value;int count=0;for(boolean item:checked)if(item)count++;
+            ((AlertDialog)d).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(count>0);
+            ((AlertDialog)d).getButton(AlertDialog.BUTTON_POSITIVE).setText(getString(R.string.import_count,count));
+        }).setNegativeButton("Cancel",null).setPositiveButton(getString(R.string.import_count,names.length),(d,w)->{
+            java.util.List<JSONObject> chosen=new java.util.ArrayList<>();for(int i=0;i<checked.length;i++)if(checked[i])chosen.add(preview.fresh.get(i));
+            saveCampsiteImport(chosen);
+        }).create();dialog.show();
+    }
+    private void saveCampsiteImport(java.util.List<JSONObject> chosen){
+        android.content.Context context=getApplicationContext();
+        AlertDialog loading=new AlertDialog.Builder(this).setTitle("Importing campsites…").setView(new ProgressBar(this)).setCancelable(false).show();
+        imports.execute(()->{
+            try(LogStore target=new LogStore(context)){
+                int added=CampsiteImport.save(target,chosen);
+                runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){loading.dismiss();list(Module.CAMPSITES);toast(added+" campsites imported · "+(chosen.size()-added)+" duplicate links skipped");}});
+            }catch(Exception e){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){loading.dismiss();campsiteImportError(e);}});}
+        });
+    }
+    private void campsiteImportError(Exception e){
+        new AlertDialog.Builder(this).setTitle("Campsite import not completed").setMessage((e.getMessage()==null?"Choose a Google Takeout Saved CSV or ZIP and try again.":e.getMessage())+"\n\nNo campsites were added. Existing records were kept.").setPositiveButton("Close",null).show();
     }
     private void openMapFromEditor(){
         new AlertDialog.Builder(this).setMessage("Discard this draft and open the travel map?").setNegativeButton("Keep editing",null).setPositiveButton("Open map",(d,w)->{

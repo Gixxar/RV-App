@@ -10,6 +10,22 @@ A GitHub build also places the APK under **Actions → Android → the successfu
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
 
+## Google Maps campsite lists (version 1.5)
+
+Open **Campsites → Import Google Maps list**. This imports exported files; it does not sign in to Google, sync lists or scrape shared-list links.
+
+1. Open [Google Takeout](https://takeout.google.com/), deselect all products and select **Saved**, then create a one-off ZIP export. [Google’s saved-list export instructions](https://support.google.com/maps/answer/7280933?co=GENIE.Platform%3DAndroid&hl=en) describe this route.
+2. Download the ZIP to your phone. In the app, choose that ZIP or an extracted list CSV. For a ZIP containing several lists, select the campsite list you want.
+3. Review the new places, untick any that are not campsites or that you do not want, then tap **Import**. Cancel makes no changes. The preview reports duplicate links and unsupported/incomplete rows.
+
+The CSV needs **Title** and **URL** headings (case-insensitive); **Note**, **Comment**, **Tags** and **Address** are optional. UTF-8/BOM, quoted commas, escaped quotes and multiline notes are supported. Google Maps place links, including short links, are kept in Notes alongside the source list name. Imported records get an **Open in Google Maps** action; no link is fetched during import. Ordinary saved websites, missing names and unsupported URLs are skipped. Other saved places cannot be identified automatically as campsites: choose the right list and review the ticked places.
+
+Duplicate detection compares retained Google Maps links within the list and against existing campsite Notes. The same link is skipped on repeat imports, including after renaming the campsite or restoring a backup. Different links for the same place may need manual cleanup; editing/removing the retained link changes this identity. Existing campsites and other logbook records are never overwritten. Imports save as one transaction, so a failed import adds nothing. Original list order is preserved among new campsites. Names, notes, optional addresses and source links use existing campsite fields and round-trip through backups.
+
+Saved places are not evidence of a visit. Imports leave stay dates empty and do not create visited-place pins or routes. Use **Open in Google Maps** to view the original place; add confirmed visits separately on the travel map. Addresses are retained only when supplied in the CSV; the app does not guess addresses or coordinates from names or short links.
+
+Limits: 2,000 nonblank data rows per CSV or ZIP, 10 MB input, 20 MB total expanded ZIP, 500 ZIP entries, 100 CSV lists, 64 columns and 16,000 characters per field. ZIP entries are read in memory and never extracted. Malformed CSV, invalid UTF-8, unsupported headers and exceeded limits stop the import before saving. For larger exports, choose a single extracted campsite CSV. The supplied 1.5 APK keeps the 1.3/1.4 development signing key, application ID and database format, so it can update those supplied versions in place.
+
 ## Professional interface (version 1.4)
 
 The interface now uses a compact branded header, consistent medium-weight typography, white cards and a quieter cream/forest-green palette. Persistent Home, Map, Checks and Records navigation groups the logbook into clear sections. The overview highlights odometer, costs, service reminders and checklist progress. Record forms use labelled inputs, inline date controls and a fixed Cancel/Save bar; empty lists explain how to begin. The original RV banner and crest remain.

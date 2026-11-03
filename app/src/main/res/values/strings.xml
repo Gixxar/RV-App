@@ -2,4 +2,7 @@
 <string name="travel_map_note">Internet loads the map background. Pins and paths stay on this device. Use a GPX file for recorded journeys, or draw manual connections.</string>
 <string name="brand_name">The Poulton’s</string><string name="app_subtitle">RV Logbook</string><string name="no_entries">No entries yet</string>    <string name="empty_detail">Add your first %1$s to start building your logbook.</string>
     <string name="service_completed">Service completed</string>
+    <string name="review_campsites">Review campsites</string>
+    <string name="import_count">Import %1$d</string>
+    <string name="campsite_review_detail">%1$s\n\nTick only campsites you want to add. These will not be marked as visited.</string>
 </resources>
