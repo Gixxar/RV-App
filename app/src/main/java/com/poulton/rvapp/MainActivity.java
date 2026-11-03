@@ -181,7 +181,7 @@ public final class MainActivity extends Activity {
         }
         if (request == 10 && result == RESULT_OK && data != null && data.getData() != null && draft != null) {
             Uri uri = data.getData();
-            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); put(draft,"uri",uri.toString()); photoLabel.setText("Photo attached"); }
+            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); put(draft,"uri",uri.toString()); photoLabel.setText(R.string.photo_attached); }
             catch (SecurityException e) { toast("Cannot retain access to this photo. Choose another provider."); }
         }
     }
