@@ -6,12 +6,17 @@ import android.graphics.drawable.Drawable;
 /** Simple, resolution-independent travel symbols for the dashboard. */
 final class LogbookIcon extends Drawable {
     private final Module module;
+    private final Path symbol=new Path();
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
     LogbookIcon(Module module){this.module=module;}
     @Override public void draw(Canvas canvas) {
-        int saved=canvas.save();canvas.translate(getBounds().left,getBounds().top);canvas.scale(getBounds().width()/32f,getBounds().height()/32f);
+        symbol.reset();int saved=canvas.save();canvas.translate(getBounds().left,getBounds().top);canvas.scale(getBounds().width()/32f,getBounds().height()/32f);
         p.setColor(AdventureStyle.GREEN);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);
         switch(module) {
+            case PLACES:
+                Path pin=symbol;pin.moveTo(16,30);pin.cubicTo(10,22,5,16,5,11);pin.cubicTo(5,-1,27,-1,27,11);pin.cubicTo(27,16,22,22,16,30);canvas.drawPath(pin,p);canvas.drawCircle(16,11,4,p);break;
+            case ROUTES:
+                canvas.drawCircle(7,6,3,p);canvas.drawCircle(25,26,3,p);Path route=symbol;route.moveTo(7,9);route.cubicTo(7,22,25,8,25,23);canvas.drawPath(route,p);break;
             case TRIPS:
                 canvas.drawLine(8,3,3,29,p);canvas.drawLine(24,3,29,29,p);canvas.drawLine(16,4,16,10,p);canvas.drawLine(16,15,16,20,p);canvas.drawLine(16,25,16,29,p);break;
             case CHECKS:

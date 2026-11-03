@@ -1,6 +1,6 @@
 # The Poultons’ RV Logbook — Android
 
-An offline, native Android logbook for trips and vehicle care. Runs on Android 8.0 and later. Miles, litres and GBP. No account, server, ads, tracking or Internet permission.
+An Android logbook for trips and vehicle care, with records saved offline and an online travel map. Runs on Android 8.0 and later. Miles, litres and GBP. No account, ads or automatic location tracking. Internet permission loads the map background and supports explicit place searches.
 
 ## Install on your Android phone
 
@@ -10,6 +10,20 @@ A GitHub build also places the APK under **Actions → Android → the successfu
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
 
+## Travel map (version 1.2)
+
+Open **Travel map · routes & visited places** on the dashboard.
+
+- **Add place:** tap the map, confirm the coordinates, then save a name/date and optionally choose a saved trip. **Find place** searches a town/postcode/address through the phone’s Android geocoding provider; choose and confirm a result before saving. Direct decimal coordinate entry is also available under Places visited.
+- **Import GPX:** choose a recorded GPX track or route file, name it, link it to a trip and save. Solid green paths display the imported coordinates. Track segment gaps stay separate. Import limit: 5 MB / 20,000 points / 500 segments; every segment needs at least two points. GPX track and GPX route sources remain distinguishable in the record.
+- **Draw route:** tap waypoints, use Undo if needed, then Save route. Dashed gold lines are straight connections between manually chosen points; they are not road routing or verified GPS tracks. Manual drawing is limited to 500 points.
+- Filter the map by the saved **Trip** label; **Fit all** frames the visible records. Layer controls toggle places, GPX paths and manual paths. Tap a pin/line to edit it; place popups can open the phone’s maps app.
+- Existing trip titles, From/To text and campsite addresses are not automatically geocoded. Add places or import/draw paths to populate the map. Link records using Choose saved trip or a matching Trip label.
+- The OpenStreetMap background requires internet; ordinary cached tiles may remain available, but this is not an offline-map download feature. Saved pins and paths stay in SQLite and are rendered locally. The tile provider receives requests for the viewed area; searches go through the Android geocoding provider. The app does not request GPS/location permission or record journeys automatically.
+- Places and route geometry are included in JSON backup/restore. Older backups can be restored into 1.2; backups containing these new record types require 1.2 or later. Original photo files still need separate saving.
+
+Map code bundles Leaflet 1.9.4 and its licence under `app/src/main/assets/map`. Only HTTPS OpenStreetMap tiles are fetched; bundled scripts/styles load locally. Map attribution stays visible, a distinct app User-Agent is sent, and normal WebView HTTP caching is retained. There is no bulk tile prefetch. The local map has no JavaScript-to-Java bridge and navigation/resource access is restricted. Android provider availability and live tile delivery still need phone acceptance testing.
+
 ## Adventure poster styling (version 1.1)
 
 The interface follows the supplied Poulton’s RV poster: original RV banner and crest, warm paper backgrounds, dark ink/forest-green section bars, gold borders/stars, condensed headings and RV-style footer stripes. The dashboard uses touch-sized feature cards and adapts to one column on narrow screens or larger font settings. All list screens, record forms, checkboxes, buttons and system-bar colours use the same palette. The update retains the application ID, database schema and signing key of the supplied 1.0 APK, allowing an in-place update with existing records preserved.
@@ -18,6 +32,7 @@ The interface follows the supplied Poulton’s RV poster: original RV banner and
 
 | Area | Available behavior |
 | --- | --- |
+| Travel map | Visited-place pins, GPX track/route imports, manual route drawing, trip filters, place search and external maps |
 | Dashboard | Recorded odometer, total fuel/expense/maintenance costs, due service count, departure progress |
 | Trip logs | Name, date picker, route, start/end odometer, notes; add, edit, delete |
 | Departure checklist | Eleven editable starter checks, custom checks, persistent tick state, confirmed reset |
@@ -41,7 +56,7 @@ The departure checklist is a starting point. Adapt it to your vehicle and its ma
 - Restore validates format, version, module names, field types, dates and amounts before a database transaction replaces existing data. Export the current logbook first. Import limit: 10 MB and 10,000 records.
 - Android schedules a persisted daily background check. Alerts are approximate, depend on notification permission/settings and battery restrictions, and resume after reboot. Force-stopping the app suspends background work until it is opened again. The app also refreshes alerts when opened and when records change.
 - Mileage reminders use recorded readings; there is no automatic vehicle connection or background mileage tracking.
-- The app has no cloud sync, GPS, maps, multiple vehicles, automatic recurring maintenance logs or live sensor connection. Photo associations are text labels. Database and file operations are synchronous for a small personal logbook.
+- The app has no cloud sync, GPS recording, multiple vehicles, automatic recurring maintenance logs or live sensor connection. Photo associations are text labels. Database and file operations are synchronous for a small personal logbook.
 
 ## Build and test
 
@@ -66,10 +81,11 @@ Tests cover date/amount validation, due boundaries, SQLite persistence/edit/dele
 5. Add a photo, rotate while editing, save, relaunch and open it. Cancel a picker without losing your form.
 6. Export a backup. Restore it, confirming replacement, and verify records. Reattach the photo. Try a malformed backup and verify the existing data remains.
 7. Add/edit/delete fuel, expenses and campsite records. Cancel a deletion and confirm the entry remains.
-8. Check the layout and keyboard on your Samsung phone. Background alert delivery can be delayed by Android battery settings.
+8. Open the travel map, add a place, draw a manual route and import a GPX track. Link both to a saved trip; filter and toggle layers. Confirm segment gaps are not joined and manual connections are dashed. Tap a place and open it in Maps. Back up and restore these records. Test map tile loading and address search on your phone.
+9. Check the layout and keyboard on your Samsung phone. Background alert delivery can be delayed by Android battery settings.
 
 ## Architecture
 
-One application module, Java 17, native Android views, no runtime third-party libraries. `Module` defines stable persisted keys; `Rules` validates forms/imports; `LogStore` owns SQLite; `Backup` validates and transfers records; `ServiceNotifications` manages Android jobs/channels; `MainActivity` owns the screens.
+One application module, Java 17, native Android views and SQLite, plus a restricted WebView with bundled Leaflet 1.9.4 for the travel map. `Module` defines stable persisted keys; `Rules` validates forms/imports; `LogStore` owns SQLite; `Backup` validates and transfers records; `ServiceNotifications` manages Android jobs/channels; `MainActivity` owns the logbook screens; `TravelMapActivity`, `GeoData` and `GpxImport` handle maps and route geometry.
 
 Database schema version 1 stores module-tagged JSON. Keep field keys stable; introduce explicit, non-destructive migrations before schema changes. Tests use JUnit 4 and Robolectric.

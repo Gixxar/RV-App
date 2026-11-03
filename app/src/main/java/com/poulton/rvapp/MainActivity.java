@@ -31,6 +31,7 @@ public final class MainActivity extends Activity {
     private long editId;
     private final Map<String, EditText> inputs = new LinkedHashMap<>();
     private TextView photoLabel;
+    private final java.util.concurrent.ExecutorService imports=java.util.concurrent.Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); store = new LogStore(this);
@@ -115,8 +116,10 @@ public final class MainActivity extends Activity {
         TextView progress=text("DEPARTURE READY  ·  "+checked+" / "+total+" CHECKED",13);progress.setTypeface(AdventureStyle.DISPLAY);
         ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(Math.max(total,1));bar.setProgress((int)checked);
         bar.setProgressTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN));bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffdfd3bd));content.addView(bar,new LinearLayout.LayoutParams(-1,dp(7)));
+        section("YOUR TRAVEL MAP",AdventureStyle.GREEN);
+        button("Travel map · routes & visited places",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
         section("EXPLORE YOUR LOGBOOK",AdventureStyle.GREEN);
-        Module[] areas={Module.TRIPS,Module.CHECKS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE};
+        Module[] areas={Module.TRIPS,Module.CHECKS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES};
         int columns=getResources().getConfiguration().fontScale>1.2f || getResources().getConfiguration().screenWidthDp<360 ? 1 : 2;
         for(int i=0;i<areas.length;i+=columns) {
             LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setBaselineAligned(false);content.addView(row);
@@ -124,7 +127,7 @@ public final class MainActivity extends Activity {
         }
         section("KEEP YOUR MEMORIES SAFE",0xff6b5b43);button("Backup & restore",this::backups);
         TextView footer=text("Making memories… one mile at a time.\n★  ★  ★",16);footer.setGravity(android.view.Gravity.CENTER);footer.setTypeface(Typeface.create("serif",Typeface.ITALIC));
-        text("Version 1.1 · Miles · Litres · GBP\nSaved on this device. Back up your logbook before changing phones or uninstalling.",12);
+        text("Version 1.2 · Miles · Litres · GBP\nSaved on this device. Back up your logbook before changing phones or uninstalling.",12);
         content.addView(new AdventureStyle.Stripes(this),new LinearLayout.LayoutParams(-1,dp(30)));
     }
     private void stat(LinearLayout row,String value,String label) {
@@ -141,6 +144,10 @@ public final class MainActivity extends Activity {
     }
     private void list(Module module) {
         selected = module; draft = null; screen(module.title); button("Home", this::home); button("Add record", () -> editor(new JSONObject(),0));
+        if(module == Module.PLACES || module == Module.ROUTES){
+            button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
+            if(module==Module.ROUTES)button("Import GPX track",this::chooseGpx);
+        }
         if (module == Module.CHECKS) {
             text("Reusable starting checks. Add checks specific to your RV and follow its manual.",16);
             button("Reset all checks for next departure", () -> new AlertDialog.Builder(this).setMessage("Mark every departure check as incomplete?").setNegativeButton("Cancel",null).setPositiveButton("Reset",(d,w)->{
@@ -161,7 +168,8 @@ public final class MainActivity extends Activity {
             TextView recordTitle=new TextView(this);recordTitle.setText(e.data.optString(module.fields[0],module.title).toUpperCase(Locale.UK));recordTitle.setTypeface(AdventureStyle.DISPLAY);recordTitle.setTextSize(18);recordTitle.setTextColor(AdventureStyle.CARD);recordTitle.setPadding(dp(10),dp(9),dp(10),dp(9));recordTitle.setBackground(AdventureStyle.panel(this,AdventureStyle.GREEN,AdventureStyle.GREEN));recordContent.addView(recordTitle);
             StringBuilder label = new StringBuilder();
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
-            for (String field : module.fields) if (!e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
+            for (String field : module.fields) if (!field.equals("Route points") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
+            if(module==Module.ROUTES)try{org.json.JSONArray segments=GeoData.parse(e.data.optString("Route points"));label.append(GeoData.pointCount(segments)).append(" points · ").append(String.format(Locale.UK,"%.1f",GeoData.miles(segments))).append(" path miles\n");}catch(Exception ignored){}
             if (module == Module.CHECKS || module == Module.REMINDERS) {
                 CheckBox check = new CheckBox(this); check.setText(module == Module.CHECKS ? "Checked" : "Service completed"); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
                 if (module == Module.REMINDERS && e.data.optBoolean("done")) check.setEnabled(false);
@@ -186,17 +194,34 @@ public final class MainActivity extends Activity {
     private void editor(JSONObject data, long id) {
         try { draft = new JSONObject(data.toString()); } catch (org.json.JSONException e) { throw new IllegalStateException(e); }
         editId = id; inputs.clear(); screen((id == 0 ? "Add: " : "Edit: ") + selected.title);
+        if(selected==Module.PLACES){
+            text("Choose a place on the travel map, or enter decimal latitude and longitude below.",16);
+            button("Choose place on map",this::openMapFromEditor);
+        }
+        if(selected==Module.ROUTES){
+            text(draft.optString("Route type").isEmpty()?"Use Import GPX or Draw route on the travel map to attach a path.":draft.optString("Route type")+" · path attached",16);
+            button("Open travel map",this::openMapFromEditor);
+            button("Import GPX file",()->confirmGpxReplace());
+        }
         for (String field : selected.fields) {
+            if(field.equals("Route points")||field.equals("Route type"))continue;
             TextView fieldLabel=text(field.toUpperCase(Locale.UK) + (selected.required(field) ? " *" : ""),14);fieldLabel.setTypeface(AdventureStyle.DISPLAY);
             EditText input = new EditText(this); input.setSingleLine(!field.equals("Notes"));
             if (Rules.isNumber(field)) input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            if(field.equals("Latitude")||field.equals("Longitude"))input.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_SIGNED);
             if (field.toLowerCase(java.util.Locale.ROOT).contains("date")) input.setHint("YYYY-MM-DD");
             input.setTextColor(AdventureStyle.TEXT);input.setHintTextColor(0xff756b59);input.setMinHeight(dp(52));
             input.setBackgroundTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GOLD));input.setTypeface(AdventureStyle.BODY);input.setTextSize(17);
             input.setText(draft.optString(field));
-            if (id == 0 && field.equals("Date") && draft.optString(field).isEmpty()) input.setText(LocalDate.now().toString());
+            if (id == 0 && field.equals("Date") && draft.optString(field).isEmpty() && !(selected==Module.ROUTES && draft.optString("Route type").startsWith("GPX"))) input.setText(LocalDate.now().toString());
             if (field.equals("Notes")) { input.setMinLines(3); input.setGravity(android.view.Gravity.TOP); }
             content.addView(input); inputs.put(field,input);
+            if(field.equals("Trip"))button("Choose saved trip",()->{
+                java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();names.add("");
+                for(LogStore.Entry trip:store.list(Module.TRIPS))names.add(trip.data.optString("Name"));
+                String[] values=names.toArray(new String[0]),labels=values.clone();labels[0]="Unlinked";
+                new AlertDialog.Builder(this).setTitle("Link to a trip").setItems(labels,(d,index)->input.setText(values[index])).setNegativeButton("Cancel",null).show();
+            });
             if (field.toLowerCase(Locale.ROOT).contains("date")) button("Choose " + field.toLowerCase(Locale.ROOT), () -> {
                 LocalDate date; try { date=LocalDate.parse(input.getText().toString()); } catch (RuntimeException e) { date=LocalDate.now(); }
                 new DatePickerDialog(this,(picker,y,m,d)->input.setText(LocalDate.of(y,m+1,d).toString()),date.getYear(),date.getMonthValue()-1,date.getDayOfMonth()).show();
@@ -229,6 +254,21 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
+        if(request==40&&result==RESULT_OK&&data!=null){
+            String action=data.getStringExtra("action");
+            if("import".equals(action)){chooseGpx();return;}
+            if("edit".equals(action)){
+                selected=Module.valueOf(data.getStringExtra("module"));long id=data.getLongExtra("id",0);
+                for(LogStore.Entry e:store.list(selected))if(e.id==id){editor(e.data,id);return;}
+                list(selected);return;
+            }
+            JSONObject record=new JSONObject();
+            if("pin".equals(action)){selected=Module.PLACES;put(record,"Name",data.getStringExtra("Name"));put(record,"Latitude",data.getStringExtra("Latitude"));put(record,"Longitude",data.getStringExtra("Longitude"));}
+            else if("route".equals(action)){selected=Module.ROUTES;put(record,"Route type","Manual waypoints");put(record,"Route points",data.getStringExtra("Route points"));}
+            else return;
+            editor(record,0);return;
+        }
+        if(request==41&&result==RESULT_OK&&data!=null&&data.getData()!=null){importGpx(data.getData());return;}
         if ((request == 20 || request == 21) && result == RESULT_OK && data != null && data.getData() != null) {
             handleBackupResult(request,data.getData()); return;
         }
@@ -312,7 +352,28 @@ public final class MainActivity extends Activity {
             }
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
     }
-    @Override protected void onDestroy() { store.close(); super.onDestroy(); }
+    private void openMapFromEditor(){
+        new AlertDialog.Builder(this).setMessage("Discard this draft and open the travel map?").setNegativeButton("Keep editing",null).setPositiveButton("Open map",(d,w)->{
+            draft=null;list(selected);startActivityForResult(new Intent(this,TravelMapActivity.class),40);
+        }).show();
+    }
+    private void confirmGpxReplace(){
+        new AlertDialog.Builder(this).setMessage("Import a GPX file as a new route? This replaces the unsaved draft; saved routes are kept.").setNegativeButton("Keep editing",null).setPositiveButton("Import",(d,w)->chooseGpx()).show();
+    }
+    private void chooseGpx(){
+        startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),41);
+    }
+    private void importGpx(Uri uri){
+        toast("Reading GPX file…");
+        android.content.ContentResolver resolver=getApplicationContext().getContentResolver();
+        imports.execute(()->{
+            try(InputStream in=resolver.openInputStream(uri)){
+                if(in==null)throw new java.io.IOException("File unavailable");JSONObject route=GpxImport.read(in);
+                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;selected=Module.ROUTES;editor(route,0);toast("Path imported. Name the journey, link its trip and save.");});
+            }catch(Exception e){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())toast("Could not import GPX: "+(e.getMessage()==null?"invalid file":e.getMessage()));});}
+        });
+    }
+    @Override protected void onDestroy() { imports.shutdownNow();store.close(); super.onDestroy(); }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
     private static void put(JSONObject o, String key, Object value) { try { o.put(key,value); } catch (org.json.JSONException e) { throw new IllegalArgumentException(e); } }
 }
