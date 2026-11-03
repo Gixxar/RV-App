@@ -7,7 +7,6 @@ import android.Manifest;
 import android.os.Build;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.view.WindowInsets;
 import java.util.Locale;
 import java.nio.charset.StandardCharsets;
@@ -50,10 +49,19 @@ public final class MainActivity extends Activity {
         super.onResume(); ServiceNotifications.refresh(this);
     }
     private void screen(String title) {
-        ScrollView scroll = new ScrollView(this);
-        content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int)(20 * getResources().getDisplayMetrics().density); content.setPadding(pad,pad,pad,pad);
-        content.setBackgroundColor(0xfff4f7f5); scroll.setFillViewport(true); scroll.addView(content); setContentView(scroll);
+        boolean dashboard=title.equals("The Poultons’ RV Logbook");
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
+        scroll.setBackgroundColor(AdventureStyle.PAPER);
+        LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setBackground(AdventureStyle.paper());
+        scroll.addView(page);setContentView(scroll);
+        if(dashboard) {
+            ImageView hero=new ImageView(this);hero.setImageResource(R.drawable.adventure_header);
+            hero.setContentDescription("The Poulton’s RV Adventure Logbook — motorhome and adventure branding");
+            hero.setAdjustViewBounds(true);hero.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            page.addView(hero,new LinearLayout.LayoutParams(-1,-2));
+        }
+        content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(16),dp(16),dp(16),dp(24));page.addView(content);
+        if(!dashboard) brand();
         scroll.setOnApplyWindowInsetsListener((v,insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime());
@@ -61,33 +69,75 @@ public final class MainActivity extends Activity {
             } else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
             return insets;
         });
-        TextView heading = text(title, 28); heading.setTextColor(0xff124d49); heading.setTypeface(null,Typeface.BOLD);
+        section(dashboard ? "YOUR ADVENTURE LOGBOOK" : title,AdventureStyle.INK);
+    }
+    private void brand() {
+        LinearLayout row=new LinearLayout(this);row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        ImageView crest=new ImageView(this);crest.setImageResource(R.drawable.poulton_crest);crest.setContentDescription("The Poulton’s RV crest");
+        crest.setScaleType(ImageView.ScaleType.FIT_CENTER);row.addView(crest,new LinearLayout.LayoutParams(dp(48),dp(58)));
+        TextView name=new TextView(this);name.setText("THE POULTON’S\nRV ADVENTURE LOGBOOK");name.setTextColor(AdventureStyle.INK);name.setTypeface(AdventureStyle.DISPLAY);name.setTextSize(18);name.setPadding(dp(12),0,0,0);row.addView(name);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,0,0,dp(14));content.addView(row,lp);
+    }
+    private void section(String label,int color) {
+        TextView heading=new TextView(this);
+        android.text.SpannableString caption=new android.text.SpannableString("★  " + label.toUpperCase(Locale.UK) + "  ★");
+        caption.setSpan(new android.text.style.ForegroundColorSpan(AdventureStyle.GOLD),0,1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        caption.setSpan(new android.text.style.ForegroundColorSpan(AdventureStyle.GOLD),caption.length()-1,caption.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);heading.setText(caption);
+        heading.setTypeface(AdventureStyle.DISPLAY);heading.setTextSize(18);heading.setTextColor(AdventureStyle.CARD);heading.setGravity(android.view.Gravity.CENTER);
+        heading.setPadding(dp(10),dp(11),dp(10),dp(11));heading.setBackground(AdventureStyle.panel(this,color,AdventureStyle.GOLD));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(10));content.addView(heading,lp);
+        if(Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);
     }
     private TextView text(String value, int size) {
-        TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(0xff243c3a); t.setPadding(0,12,0,12); content.addView(t); return t;
+        TextView t = new TextView(this);t.setText(value);t.setTextSize(size);t.setTypeface(AdventureStyle.BODY);t.setTextColor(AdventureStyle.TEXT);
+        t.setLineSpacing(dp(2),1);t.setPadding(0,dp(8),0,dp(8));content.addView(t);return t;
+    }
+    private Button makeButton(String label, Runnable action) {
+        Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(16);b.setTypeface(AdventureStyle.DISPLAY);
+        b.setTextColor(AdventureStyle.CARD);b.setMinHeight(dp(50));
+        android.graphics.drawable.StateListDrawable states=new android.graphics.drawable.StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_pressed},AdventureStyle.panel(this,AdventureStyle.GREEN,AdventureStyle.GOLD));
+        states.addState(new int[]{},AdventureStyle.panel(this,AdventureStyle.INK,AdventureStyle.GOLD));
+        b.setBackground(states);b.setPadding(dp(12),dp(12),dp(12),dp(12));b.setOnClickListener(v->action.run());return b;
     }
     private void button(String label, Runnable action) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false); b.setTextSize(16);
-        b.setTextColor(0xffffffff); b.setMinHeight(dp(52));
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(0xff176b65); bg.setCornerRadius(dp(12));
-        b.setBackground(bg); b.setPadding(dp(14),dp(10),dp(14),dp(10));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,dp(5),0,dp(5)); content.addView(b,lp);
-        b.setOnClickListener(v -> action.run());
+        Button b=makeButton(label,action);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(5),0,dp(5));content.addView(b,lp);
     }
     private void home() {
-        selected = null; draft = null; screen("The Poultons’ RV Logbook");
-        text("READY FOR THE NEXT JOURNEY",12);
-        text("Trips, travel checks and vehicle care, even when you’re offline.",16);
-        text(String.format(Locale.UK,"%,.0f miles  •  £%,.2f total recorded costs",store.latestMileage(),store.totalCost()),18);
-        int due = store.dueCount();
-        button(due == 0 ? "Service reminders · all up to date" : due + " service reminder(s) due · review",() -> list(Module.REMINDERS));
-        int total=store.list(Module.CHECKS).size();
-        long checked=store.list(Module.CHECKS).stream().filter(e->e.data.optBoolean("done")).count();
-        text("Departure checks: " + checked + " of " + total + " checked",17);
-        for (Module module : Module.values()) if (module != Module.REMINDERS) button(module.title + "  ·  " + store.list(module).size(), () -> list(module));
-        text("YOUR DATA",13);
-        button("Backup & restore",this::backups);
-        text("Version 1.0 · Miles · Litres · GBP\nSaved privately on this device. Export a backup before changing phones or uninstalling.",14);
+        selected=null;draft=null;screen("The Poultons’ RV Logbook");
+        TextView welcome=text("The road. The journey. The memories.",17);welcome.setTypeface(Typeface.create("serif",Typeface.ITALIC));welcome.setGravity(android.view.Gravity.CENTER);
+        LinearLayout stats=new LinearLayout(this);stats.setOrientation(LinearLayout.HORIZONTAL);content.addView(stats);
+        stat(stats,String.format(Locale.UK,"%,.0f",store.latestMileage()),"ODOMETER · MILES");
+        stat(stats,String.format(Locale.UK,"£%,.2f",store.totalCost()),"TOTAL RECORDED COSTS");
+        int due=store.dueCount();
+        button(due==0?"Service reminders · all up to date":due+" service reminder(s) due · review",()->list(Module.REMINDERS));
+        int total=store.list(Module.CHECKS).size();long checked=store.list(Module.CHECKS).stream().filter(e->e.data.optBoolean("done")).count();
+        TextView progress=text("DEPARTURE READY  ·  "+checked+" / "+total+" CHECKED",13);progress.setTypeface(AdventureStyle.DISPLAY);
+        ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(Math.max(total,1));bar.setProgress((int)checked);
+        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN));bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffdfd3bd));content.addView(bar,new LinearLayout.LayoutParams(-1,dp(7)));
+        section("EXPLORE YOUR LOGBOOK",AdventureStyle.GREEN);
+        Module[] areas={Module.TRIPS,Module.CHECKS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE};
+        int columns=getResources().getConfiguration().fontScale>1.2f || getResources().getConfiguration().screenWidthDp<360 ? 1 : 2;
+        for(int i=0;i<areas.length;i+=columns) {
+            LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setBaselineAligned(false);content.addView(row);
+            tile(row,areas[i],true);if(columns==2)tile(row,areas[i+1],false);
+        }
+        section("KEEP YOUR MEMORIES SAFE",0xff6b5b43);button("Backup & restore",this::backups);
+        TextView footer=text("Making memories… one mile at a time.\n★  ★  ★",16);footer.setGravity(android.view.Gravity.CENTER);footer.setTypeface(Typeface.create("serif",Typeface.ITALIC));
+        text("Version 1.1 · Miles · Litres · GBP\nSaved on this device. Back up your logbook before changing phones or uninstalling.",12);
+        content.addView(new AdventureStyle.Stripes(this),new LinearLayout.LayoutParams(-1,dp(30)));
+    }
+    private void stat(LinearLayout row,String value,String label) {
+        LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(10),dp(12),dp(10),dp(12));card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.GOLD));
+        TextView n=new TextView(this);n.setText(value);n.setTextSize(22);n.setTypeface(AdventureStyle.DISPLAY);n.setTextColor(AdventureStyle.INK);card.addView(n);
+        TextView l=new TextView(this);l.setText(label);l.setTextSize(10);l.setTypeface(AdventureStyle.DISPLAY);l.setTextColor(0xff625642);l.setPadding(0,dp(4),0,0);card.addView(l);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(6),dp(3),dp(10));row.addView(card,lp);
+    }
+    private void tile(LinearLayout row,Module module,boolean left) {
+        Button b=makeButton(module.title+"\n"+store.list(module).size()+" records",()->list(module));
+        b.setTextColor(AdventureStyle.INK);b.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.GOLD));b.setTextSize(16);b.setGravity(android.view.Gravity.CENTER);b.setMinHeight(dp(128));
+        android.graphics.drawable.Drawable icon=new LogbookIcon(module);icon.setBounds(0,0,dp(27),dp(27));b.setCompoundDrawables(null,icon,null,null);b.setCompoundDrawablePadding(dp(6));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(left?0:dp(5),dp(5),left?dp(5):0,dp(5));row.addView(b,lp);
     }
     private void list(Module module) {
         selected = module; draft = null; screen(module.title); button("Home", this::home); button("Add record", () -> editor(new JSONObject(),0));
@@ -105,13 +155,15 @@ public final class MainActivity extends Activity {
         for (LogStore.Entry e : store.list(module)) {
             LinearLayout parent = content;
             LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(12),dp(16),dp(12));
-            GradientDrawable bg = new GradientDrawable(); bg.setColor(0xffffffff); bg.setCornerRadius(dp(16)); card.setBackground(bg);
+            card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.GOLD));
             LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1,-2); cardLp.setMargins(0,dp(12),0,dp(4)); parent.addView(card,cardLp); content=card;
+            LinearLayout recordContent=content;
+            TextView recordTitle=new TextView(this);recordTitle.setText(e.data.optString(module.fields[0],module.title).toUpperCase(Locale.UK));recordTitle.setTypeface(AdventureStyle.DISPLAY);recordTitle.setTextSize(18);recordTitle.setTextColor(AdventureStyle.CARD);recordTitle.setPadding(dp(10),dp(9),dp(10),dp(9));recordTitle.setBackground(AdventureStyle.panel(this,AdventureStyle.GREEN,AdventureStyle.GREEN));recordContent.addView(recordTitle);
             StringBuilder label = new StringBuilder();
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
             for (String field : module.fields) if (!e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
             if (module == Module.CHECKS || module == Module.REMINDERS) {
-                CheckBox check = new CheckBox(this); check.setText(module == Module.CHECKS ? "Checked" : "Service completed"); check.setTextColor(0xff243c3a); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
+                CheckBox check = new CheckBox(this); check.setText(module == Module.CHECKS ? "Checked" : "Service completed"); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
                 if (module == Module.REMINDERS && e.data.optBoolean("done")) check.setEnabled(false);
                 content.addView(check);
                 check.setOnCheckedChangeListener((v,done)->{
@@ -135,11 +187,12 @@ public final class MainActivity extends Activity {
         try { draft = new JSONObject(data.toString()); } catch (org.json.JSONException e) { throw new IllegalStateException(e); }
         editId = id; inputs.clear(); screen((id == 0 ? "Add: " : "Edit: ") + selected.title);
         for (String field : selected.fields) {
-            text(field + (selected.required(field) ? " *" : ""),16);
+            TextView fieldLabel=text(field.toUpperCase(Locale.UK) + (selected.required(field) ? " *" : ""),14);fieldLabel.setTypeface(AdventureStyle.DISPLAY);
             EditText input = new EditText(this); input.setSingleLine(!field.equals("Notes"));
             if (Rules.isNumber(field)) input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
             if (field.toLowerCase(java.util.Locale.ROOT).contains("date")) input.setHint("YYYY-MM-DD");
-            input.setTextColor(0xff172f2d); input.setHintTextColor(0xff536e6b); input.setMinHeight(dp(52));
+            input.setTextColor(AdventureStyle.TEXT);input.setHintTextColor(0xff756b59);input.setMinHeight(dp(52));
+            input.setBackgroundTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GOLD));input.setTypeface(AdventureStyle.BODY);input.setTextSize(17);
             input.setText(draft.optString(field));
             if (id == 0 && field.equals("Date") && draft.optString(field).isEmpty()) input.setText(LocalDate.now().toString());
             if (field.equals("Notes")) { input.setMinLines(3); input.setGravity(android.view.Gravity.TOP); }
