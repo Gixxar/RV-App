@@ -57,7 +57,7 @@ public class RoutePlannerTest {
         try(LogStore store=new LogStore(context)){
             store.save(Module.PLANS,0,plan());JSONObject backup=Backup.exportRecords(store);Backup.restore(store,backup);
             assertEquals(stops().toString(),store.list(Module.PLANS).get(0).data.getString("Route stops"));
-            JSONObject map=TravelMapActivity.payload(store);assertEquals(1,map.getJSONArray("plans").length());assertEquals(0,map.getJSONArray("routes").length());assertEquals(0,map.getJSONArray("places").length());assertTrue(map.getJSONArray("plans").getJSONObject(0).getString("type").contains("RV suitability not checked"));
+            JSONObject map=TravelMapActivity.payload(store);assertEquals(1,map.getJSONArray("plans").length());assertEquals(0,map.getJSONArray("routes").length());assertEquals(0,map.getJSONArray("places").length());assertTrue(map.getJSONArray("plans").getJSONObject(0).getString("type").contains("RV dimensions not applied"));
             backup.getJSONArray("records").getJSONObject(0).getJSONObject("data").put("Drive minutes","-1");
             try{Backup.restore(store,backup);fail("Invalid plan replaced data");}catch(JSONException expected){}
             assertEquals("Berlin road plan",store.list(Module.PLANS).get(0).data.getString("Name"));
