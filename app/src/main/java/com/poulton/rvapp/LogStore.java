@@ -17,20 +17,27 @@ public final class LogStore extends SQLiteOpenHelper {
         public final JSONObject data;
         Entry(long id, JSONObject data) { this.id = id; this.data = data; }
     }
-    public LogStore(Context context) { super(context, "rv-logbook.db", null, 1); }
+    public LogStore(Context context) { super(context, "rv-logbook.db", null, 2); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE entries (id INTEGER PRIMARY KEY AUTOINCREMENT, module TEXT NOT NULL, data TEXT NOT NULL)");
         db.execSQL("CREATE INDEX entries_module ON entries(module)");
-        for (String item : new String[]{"Check tyres and lights", "Secure cupboards and loose items", "Disconnect shore power and water", "Retract steps and awning", "Check doors and roof vents", "Retract levelling jacks and check warning lights", "Retract slide-outs and secure travel locks", "Check engine oil, coolant and air pressure", "Check tyre pressures to vehicle specification", "Secure LPG and appliances for travel", "Walk around RV and check clearance"}) {
-            JSONObject data = new JSONObject();
-            try { data.put("Item", item); } catch (JSONException e) { throw new IllegalStateException(e); }
-            ContentValues row = new ContentValues();
-            row.put("module", Module.CHECKS.name()); row.put("data", data.toString()); db.insertOrThrow("entries", null, row);
-        }
+        ChecklistTemplates.apply(db,false);
     }
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        throw new IllegalStateException("Add a non-destructive migration before increasing the database version");
+        if(oldVersion<2)ChecklistTemplates.apply(db,true);
     }
+    public void resetChecklist(Module module) {
+        if(!module.isChecklist())throw new IllegalArgumentException("Choose a checklist");
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        try{
+            for(Entry entry:list(module)){
+                try{entry.data.put("done",false);}catch(JSONException e){throw new IllegalStateException(e);}
+                save(module,entry.id,entry.data);
+            }
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
+    }
+
     public List<Entry> list(Module module) {
         List<Entry> rows = new ArrayList<>();
         try (Cursor c = getReadableDatabase().query("entries", new String[]{"id", "data"}, "module=?", new String[]{module.name()}, null, null, "id DESC")) {

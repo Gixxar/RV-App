@@ -112,23 +112,41 @@ public final class MainActivity extends Activity {
         stat(stats,String.format(Locale.UK,"£%,.2f",store.totalCost()),"TOTAL RECORDED COSTS");
         int due=store.dueCount();
         button(due==0?"Service reminders · all up to date":due+" service reminder(s) due · review",()->list(Module.REMINDERS));
-        int total=store.list(Module.CHECKS).size();long checked=store.list(Module.CHECKS).stream().filter(e->e.data.optBoolean("done")).count();
-        TextView progress=text("DEPARTURE READY  ·  "+checked+" / "+total+" CHECKED",13);progress.setTypeface(AdventureStyle.DISPLAY);
-        ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(Math.max(total,1));bar.setProgress((int)checked);
-        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN));bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffdfd3bd));content.addView(bar,new LinearLayout.LayoutParams(-1,dp(7)));
+        checklistProgress(Module.CHECKS,"PRE-TRIP INSPECTION");
+        checklistProgress(Module.ARRIVAL,"ARRIVAL / SETUP");
         section("YOUR TRAVEL MAP",AdventureStyle.GREEN);
         button("Travel map · routes & visited places",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
         section("EXPLORE YOUR LOGBOOK",AdventureStyle.GREEN);
-        Module[] areas={Module.TRIPS,Module.CHECKS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES};
+        Module[] areas={Module.TRIPS,Module.CHECKS,Module.ARRIVAL,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES};
         int columns=getResources().getConfiguration().fontScale>1.2f || getResources().getConfiguration().screenWidthDp<360 ? 1 : 2;
         for(int i=0;i<areas.length;i+=columns) {
             LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setBaselineAligned(false);content.addView(row);
-            tile(row,areas[i],true);if(columns==2)tile(row,areas[i+1],false);
+            tile(row,areas[i],true);if(columns==2 && i+1<areas.length)tile(row,areas[i+1],false);
         }
         section("KEEP YOUR MEMORIES SAFE",0xff6b5b43);button("Backup & restore",this::backups);
         TextView footer=text("Making memories… one mile at a time.\n★  ★  ★",16);footer.setGravity(android.view.Gravity.CENTER);footer.setTypeface(Typeface.create("serif",Typeface.ITALIC));
-        text("Version 1.2 · Miles · Litres · GBP\nSaved on this device. Back up your logbook before changing phones or uninstalling.",12);
+        text("Version 1.3 · Miles · Litres · GBP\nSaved on this device. Back up your logbook before changing phones or uninstalling.",12);
         content.addView(new AdventureStyle.Stripes(this),new LinearLayout.LayoutParams(-1,dp(30)));
+    }
+    private void checklistProgress(Module module,String label){
+        int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
+        TextView progress=text(label+"  ·  "+done+" / "+total+" CHECKED",13);progress.setTypeface(AdventureStyle.DISPLAY);
+        ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(Math.max(total,1));bar.setProgress((int)done);
+        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN));bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffdfd3bd));content.addView(bar,new LinearLayout.LayoutParams(-1,dp(7)));
+    }
+    private void renderChecklist(Module module){
+        if(store.list(module).isEmpty())text("No checks yet. Add a record above.",16);
+        for(LogStore.Entry entry:store.list(module)){
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(9),dp(5),dp(9),dp(5));card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.GOLD));
+            LinearLayout.LayoutParams cardLp=new LinearLayout.LayoutParams(-1,-2);cardLp.setMargins(0,dp(4),0,dp(4));content.addView(card,cardLp);
+            LinearLayout row=new LinearLayout(this);row.setGravity(android.view.Gravity.CENTER_VERTICAL);row.setBaselineAligned(false);card.addView(row);
+            CheckBox check=new CheckBox(this);check.setText(entry.data.optString("Item"));check.setTextSize(16);check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN));check.setMinHeight(dp(52));check.setChecked(entry.data.optBoolean("done"));row.addView(check,new LinearLayout.LayoutParams(0,-2,1));
+            check.setOnCheckedChangeListener((v,done)->{put(entry.data,"done",done);store.save(module,entry.id,entry.data);});
+            Button edit=makeButton("Edit",()->editor(entry.data,entry.id));edit.setContentDescription("Edit "+entry.data.optString("Item"));row.addView(edit,new LinearLayout.LayoutParams(dp(64),-2));
+            if(!entry.data.optString("Notes").isEmpty()){
+                TextView notes=new TextView(this);notes.setText(entry.data.optString("Notes"));notes.setTextSize(14);notes.setTextColor(AdventureStyle.TEXT);notes.setPadding(dp(8),0,0,dp(5));card.addView(notes);
+            }
+        }
     }
     private void stat(LinearLayout row,String value,String label) {
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(10),dp(12),dp(10),dp(12));card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.GOLD));
@@ -148,11 +166,10 @@ public final class MainActivity extends Activity {
             button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
             if(module==Module.ROUTES)button("Import GPX track",this::chooseGpx);
         }
-        if (module == Module.CHECKS) {
-            text("Reusable starting checks. Add checks specific to your RV and follow its manual.",16);
-            button("Reset all checks for next departure", () -> new AlertDialog.Builder(this).setMessage("Mark every departure check as incomplete?").setNegativeButton("Cancel",null).setPositiveButton("Reset",(d,w)->{
-                for (LogStore.Entry e : store.list(module)) { put(e.data,"done",false); store.save(module,e.id,e.data); } list(module);
-            }).show());
+        if(module.isChecklist()){
+            text("From your RV poster. Add vehicle-specific checks and follow your RV manual.",15);
+            button(module==Module.CHECKS?"Reset all checks for next trip":"Reset all checks for next arrival",()->new AlertDialog.Builder(this).setMessage("Mark every item in this checklist as incomplete?").setNegativeButton("Cancel",null).setPositiveButton("Reset",(d,w)->{store.resetChecklist(module);list(module);}).show());
+            renderChecklist(module);return;
         }
         if (module == Module.REMINDERS) {
             text("Due when either date or mileage is reached. Mileage uses your highest logged reading. Android checks approximately daily; battery settings may delay alerts.",16);
@@ -170,8 +187,8 @@ public final class MainActivity extends Activity {
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
             for (String field : module.fields) if (!field.equals("Route points") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
             if(module==Module.ROUTES)try{org.json.JSONArray segments=GeoData.parse(e.data.optString("Route points"));label.append(GeoData.pointCount(segments)).append(" points · ").append(String.format(Locale.UK,"%.1f",GeoData.miles(segments))).append(" path miles\n");}catch(Exception ignored){}
-            if (module == Module.CHECKS || module == Module.REMINDERS) {
-                CheckBox check = new CheckBox(this); check.setText(module == Module.CHECKS ? "Checked" : "Service completed"); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
+            if (module == Module.REMINDERS) {
+                CheckBox check = new CheckBox(this); check.setText("Service completed"); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
                 if (module == Module.REMINDERS && e.data.optBoolean("done")) check.setEnabled(false);
                 content.addView(check);
                 check.setOnCheckedChangeListener((v,done)->{

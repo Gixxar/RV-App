@@ -16,6 +16,7 @@ public final class Backup {
     public static JSONObject exportRecords(LogStore store) throws JSONException {
         JSONObject root = new JSONObject();
         root.put("format", "poulton-rv-logbook"); root.put("version",1);
+        root.put("checklistTemplatesVersion",ChecklistTemplates.VERSION);
         root.put("created",java.time.Instant.now().toString());
         JSONArray rows = new JSONArray();
         for (Module module : Module.values()) for (LogStore.Entry e : store.list(module)) {
@@ -37,6 +38,7 @@ public final class Backup {
     }
     public static int validate(JSONObject root) throws JSONException {
         if (!"poulton-rv-logbook".equals(root.optString("format")) || root.getInt("version") != 1) throw new JSONException("Unsupported backup format");
+        if(root.has("checklistTemplatesVersion") && (!(root.get("checklistTemplatesVersion") instanceof Integer) || root.getInt("checklistTemplatesVersion")<0 || root.getInt("checklistTemplatesVersion")>ChecklistTemplates.VERSION))throw new JSONException("Unsupported checklist template version");
         JSONArray records = root.getJSONArray("records");
         if (records.length() > 10000) throw new JSONException("Too many records (maximum 10,000)");
         for (int i=0;i<records.length();i++) {
@@ -70,6 +72,7 @@ public final class Backup {
                 if (data.has("done")) clean.put("done",data.getBoolean("done"));
                 ContentValues v = new ContentValues(); v.put("module",module.name()); v.put("data",clean.toString()); db.insertOrThrow("entries",null,v);
             }
+            if(root.optInt("checklistTemplatesVersion",0)<ChecklistTemplates.VERSION)ChecklistTemplates.apply(db,true);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
