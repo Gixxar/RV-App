@@ -91,7 +91,10 @@ public class CampsiteImportTest {
             a.previewCampsiteList(read(sample()));AlertDialog preview=(AlertDialog)ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             try(LogStore store=new LogStore(context)){assertTrue(store.list(Module.CAMPSITES).isEmpty());}
             a.previewCampsiteList(read(sample()));preview=(AlertDialog)ShadowAlertDialog.getLatestAlertDialog();
-            preview.getListView().performItemClick(null,1,1);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals("Import 1",preview.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
+            // Bind the row so the native adapter applies its initially checked state.
+            android.view.View row=preview.getListView().getAdapter().getView(1,null,preview.getListView());
+            assertTrue(preview.getListView().isItemChecked(1));
+            preview.getListView().performItemClick(row,1,1);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals("Import 1",preview.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
             preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             awaitCampCount(1);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             try(LogStore store=new LogStore(context)){assertEquals("Coast",store.list(Module.CAMPSITES).get(0).data.getString("Name"));}
