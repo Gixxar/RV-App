@@ -17,7 +17,8 @@ public final class Rules {
         if (field.equals("Route points")) {
             try { GeoData.parse(value); } catch(Exception e){return "Import a GPX track or draw a route on the map";}
         }
-        if (field.equals("Route type") && !value.equals("GPX track") && !value.equals("GPX route") && !value.equals("Manual waypoints")) return "Invalid route type";
+        if(field.equals("Route stops")){try{RouteService.stops(value);}catch(Exception e){return "Choose 2–10 valid route stops";}}
+        if (field.equals("Route type") && !value.equals(RouteService.TYPE) && !value.equals("GPX track") && !value.equals("GPX route") && !value.equals("Manual waypoints")) return "Invalid route type";
         if (field.toLowerCase(java.util.Locale.ROOT).contains("date")) {
             try { LocalDate.parse(value); } catch (RuntimeException e) { return "Use a valid date: YYYY-MM-DD"; }
         }
@@ -31,7 +32,7 @@ public final class Rules {
         return null;
     }
     public static boolean isNumber(String field) {
-        return field.contains("miles") || field.equals("Litres") || field.equals("Cost GBP") || field.equals("Repeat months");
+        return field.contains("miles") || field.equals("Litres") || field.equals("Cost GBP") || field.equals("Repeat months") || field.equals("Drive minutes");
     }
     public static boolean due(String date, String miles, double current, LocalDate today) {
         return (!date.isEmpty() && !LocalDate.parse(date).isAfter(today)) || (!miles.isEmpty() && Double.parseDouble(miles) <= current);
@@ -43,6 +44,8 @@ public final class Rules {
             String error = validate(field,value);
             if (error != null) return field + ": " + error;
         }
+        if(module==Module.PLANS){try{RouteService.validatePlan(values);}catch(Exception e){return "Calculate a valid road route before saving";}}
+        if(module==Module.ROUTES && RouteService.TYPE.equals(values.get("Route type")))return "Save planned routes under Route plans";
         if (module == Module.TRIPS && both(values,"Start miles","End miles") &&
                 Double.parseDouble(values.get("End miles")) < Double.parseDouble(values.get("Start miles"))) return "End miles must be at least start miles";
         if (module == Module.CAMPSITES && both(values,"Arrival date","Departure date") &&

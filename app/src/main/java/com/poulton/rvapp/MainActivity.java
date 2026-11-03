@@ -75,7 +75,7 @@ public final class MainActivity extends Activity {
         });
     }
     private String singular(Module module){
-        switch(module){case TRIPS:return "trip";case CHECKS:case ARRIVAL:return "check";case FUEL:return "fuel entry";case EXPENSES:return "expense";case MAINTENANCE:return "maintenance record";case CAMPSITES:return "campsite";case PHOTOS:return "photo";case MILEAGE:return "mileage reading";case REMINDERS:return "service reminder";case PLACES:return "visited place";default:return "route";}
+        switch(module){case PLANS:return "route plan";case TRIPS:return "trip";case CHECKS:case ARRIVAL:return "check";case FUEL:return "fuel entry";case EXPENSES:return "expense";case MAINTENANCE:return "maintenance record";case CAMPSITES:return "campsite";case PHOTOS:return "photo";case MILEAGE:return "mileage reading";case REMINDERS:return "service reminder";case PLACES:return "visited place";default:return "route";}
     }
     private void bottomNavigation(boolean dashboard){
         LinearLayout nav=new LinearLayout(this);nav.setBackgroundColor(AdventureStyle.CARD);nav.setPadding(dp(10),dp(8),dp(10),dp(8));appRoot.addView(nav);
@@ -104,13 +104,14 @@ public final class MainActivity extends Activity {
         int due=store.dueCount();Button service=makeButton(due==0?"Service reminders · all up to date":due+" service reminder(s) due · review",()->list(Module.REMINDERS));service.setTextColor(AdventureStyle.INK);service.setTextSize(14);service.setBackground(AdventureStyle.pressable(this,AdventureStyle.SOFT,0));LinearLayout.LayoutParams serviceLp=new LinearLayout.LayoutParams(-1,-2);serviceLp.setMargins(0,dp(8),0,0);content.addView(service,serviceLp);
         section("Your next journey",AdventureStyle.GREEN);LinearLayout quick=new LinearLayout(this);quick.setBaselineAligned(false);content.addView(quick);tile(quick,Module.TRIPS,true);
         Button map=makeButton("Travel map\nRoutes & visited places",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));styleTile(map,Module.PLACES);LinearLayout.LayoutParams mapLp=new LinearLayout.LayoutParams(0,-2,1);mapLp.setMargins(dp(5),dp(4),0,dp(4));quick.addView(map,mapLp);
+        button("Plan a route",()->openPlanner(0));
         section("Ready for the road",AdventureStyle.GREEN);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");
         section("Your logbook",AdventureStyle.GREEN);
-        moduleGrid(new Module[]{Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES});
+        moduleGrid(new Module[]{Module.PLANS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES});
         section("Your data",AdventureStyle.GREEN);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("Backup & restore",this::backups);text("Version 1.5 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("Backup & restore",this::backups);text("Version 1.6 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -151,7 +152,8 @@ public final class MainActivity extends Activity {
         TextView detail=new TextView(this);detail.setText(getString(R.string.empty_detail,singular(module)));detail.setTextSize(14);detail.setTextColor(AdventureStyle.MUTED);detail.setGravity(android.view.Gravity.CENTER);card.addView(detail);
     }
     private void list(Module module) {
-        selected = module; draft = null; screen(module.title); TextView count=text(store.list(module).size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button("Add record", () -> editor(new JSONObject(),0));
+        selected = module; draft = null; screen(module.title); TextView count=text(store.list(module).size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
+        if(module==Module.ROUTES)button("Plan a route",()->openPlanner(0));
         if(module==Module.CAMPSITES)button("Import Google Maps list",this::campsiteImportHelp);
         if(module == Module.PLACES || module == Module.ROUTES){
             button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
@@ -176,7 +178,7 @@ public final class MainActivity extends Activity {
             TextView recordTitle=new TextView(this);recordTitle.setText(e.data.optString(module.fields[0],module.title));recordTitle.setTypeface(AdventureStyle.DISPLAY);recordTitle.setTextSize(18);recordTitle.setTextColor(AdventureStyle.INK);recordTitle.setPadding(0,dp(2),0,dp(8));recordContent.addView(recordTitle);
             StringBuilder label = new StringBuilder();
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
-            for (String field : module.fields) if (!field.equals(module.fields[0]) && !field.equals("Route points") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
+            for (String field : module.fields) if (!field.equals(module.fields[0]) && !field.equals("Route points") && !field.equals("Route stops") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
             if(module==Module.ROUTES)try{org.json.JSONArray segments=GeoData.parse(e.data.optString("Route points"));label.append(GeoData.pointCount(segments)).append(" points · ").append(String.format(Locale.UK,"%.1f",GeoData.miles(segments))).append(" path miles\n");}catch(Exception ignored){}
             if (module == Module.REMINDERS) {
                 CheckBox check = new CheckBox(this); check.setText(R.string.service_completed); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
@@ -196,7 +198,7 @@ public final class MainActivity extends Activity {
                 catch (RuntimeException ex) { toast("Photo unavailable. Edit this record to choose it again."); }
             });
             if(module==Module.CAMPSITES){String maps=CampsiteImport.link(e.data);if(maps!=null)button("Open in Google Maps",()->openWeb(maps));}
-            button("Edit record", () -> editor(e.data,e.id));
+            button("Edit record", () -> {if(module==Module.PLANS)openPlanner(e.id);else editor(e.data,e.id);});
             content = parent;
         }
     }
@@ -273,6 +275,7 @@ public final class MainActivity extends Activity {
             if("import".equals(action)){chooseGpx();return;}
             if("edit".equals(action)){
                 selected=Module.valueOf(data.getStringExtra("module"));long id=data.getLongExtra("id",0);
+                if(selected==Module.PLANS){openPlanner(id);return;}
                 for(LogStore.Entry e:store.list(selected))if(e.id==id){editor(e.data,id);return;}
                 list(selected);return;
             }
@@ -282,6 +285,7 @@ public final class MainActivity extends Activity {
             else return;
             editor(record,0);return;
         }
+        if(request==43&&result==RESULT_OK){list(Module.PLANS);return;}
         if(request==42&&result==RESULT_OK&&data!=null&&data.getData()!=null){importCampsites(data.getData());return;}
         if(request==41&&result==RESULT_OK&&data!=null&&data.getData()!=null){importGpx(data.getData());return;}
         if ((request == 20 || request == 21) && result == RESULT_OK && data != null && data.getData() != null) {
@@ -367,6 +371,7 @@ public final class MainActivity extends Activity {
             }
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
     }
+    private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id),43);}
     private void campsiteImportHelp(){
         new AlertDialog.Builder(this).setTitle("Import Google Maps campsites")
             .setMessage("1. Open Google Takeout and deselect all, then select Saved. Create a one-off ZIP export.\n\n2. Download the export to your phone. Choose its ZIP here, or an extracted campsite list CSV. If the ZIP has several lists, choose one.\n\n3. Review the campsites and confirm. Names, notes and Google Maps links are kept; matching links are skipped. Other saved websites are skipped. Existing records stay unchanged.\n\nThis is a file import, not live sync or a shared-list link importer. No visit dates or map pins are created. Add visited places separately on the travel map. Maximum 2,000 rows / 10 MB file / 20 MB expanded ZIP.")
