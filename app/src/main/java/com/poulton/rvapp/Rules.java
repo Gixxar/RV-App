@@ -8,6 +8,16 @@ public final class Rules {
     private Rules() {}
     public static String validate(String field, String value) {
         if (value.isEmpty()) return null;
+        if (field.equals("Latitude") || field.equals("Longitude")) {
+            try {
+                double n=Double.parseDouble(value);double max=field.equals("Latitude")?90:180;
+                if(!Double.isFinite(n)||Math.abs(n)>max)return "Use a coordinate between -"+max+" and "+max;
+            } catch(NumberFormatException e){return "Enter a decimal coordinate";}
+        }
+        if (field.equals("Route points")) {
+            try { GeoData.parse(value); } catch(Exception e){return "Import a GPX track or draw a route on the map";}
+        }
+        if (field.equals("Route type") && !value.equals("GPX track") && !value.equals("GPX route") && !value.equals("Manual waypoints")) return "Invalid route type";
         if (field.toLowerCase(java.util.Locale.ROOT).contains("date")) {
             try { LocalDate.parse(value); } catch (RuntimeException e) { return "Use a valid date: YYYY-MM-DD"; }
         }

@@ -1,1 +1,3 @@
-<resources><string name="photo_attached">Photo attached</string></resources>
+<resources><string name="photo_attached">Photo attached</string><string name="travel_map_title">★ ROUTES &amp; PLACES VISITED ★</string>
+<string name="travel_map_note">Internet loads the map background. Pins and paths stay on this device. Use a GPX file for recorded journeys, or draw manual connections.</string>
+</resources>
