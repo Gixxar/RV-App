@@ -88,7 +88,7 @@ public final class TravelMapActivity extends Activity {
     }
     private void openExternal(Uri uri){try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(ActivityNotFoundException e){Toast.makeText(this,"No maps/browser app is available",Toast.LENGTH_SHORT).show();}}
     private void result(String action,Intent data){data.putExtra("action",action);setResult(RESULT_OK,data);finish();}
-    private void control(LinearLayout row,String label,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(13);b.setTextColor(AdventureStyle.CARD);b.setBackground(AdventureStyle.panel(this,AdventureStyle.INK,AdventureStyle.GOLD));b.setMinHeight(dp(48));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);b.setOnClickListener(v->action.run());}
+    private void control(LinearLayout row,String label,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(13);b.setTypeface(AdventureStyle.DISPLAY);b.setTextColor(AdventureStyle.INK);b.setBackground(AdventureStyle.pressable(this,AdventureStyle.CARD,AdventureStyle.BORDER));b.setMinHeight(dp(48));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),dp(3),dp(3),dp(3));row.addView(b,lp);b.setOnClickListener(v->action.run());}
     private int dp(int n){return(int)(n*getResources().getDisplayMetrics().density);}
     private void js(String call){if(web!=null)web.evaluateJavascript("window."+call,null);}
     private void findPlace(){

@@ -10,6 +10,12 @@ A GitHub build also places the APK under **Actions → Android → the successfu
 
 This is a development-signed personal-use build, not a Play Store release. A release channel needs a private, persistent signing key and release testing. Development APKs signed by different machines may require an uninstall to install another build; **export a backup first**, because uninstalling removes the logbook.
 
+## Professional interface (version 1.4)
+
+The interface now uses a compact branded header, consistent medium-weight typography, white cards and a quieter cream/forest-green palette. Persistent Home, Map, Checks and Records navigation groups the logbook into clear sections. The overview highlights odometer, costs, service reminders and checklist progress. Record forms use labelled inputs, inline date controls and a fixed Cancel/Save bar; empty lists explain how to begin. The original RV banner and crest remain.
+
+Version 1.4 keeps the application ID and database format, and the supplied APK uses the retained 1.3 signing key, allowing an in-place update from the supplied 1.3 build. Existing trips, checklist ticks, routes, reminders and other records are retained.
+
 ## Poster checklists (version 1.3)
 
 The dashboard now has **Pre-trip inspection checklist** (24 items) and **Arrival / setup checklist** (12 items), transcribed from the supplied poster in its displayed order. Each has its own saved ticks, notes, add/edit/delete controls, reset confirmation and dashboard progress. Resetting one list does not reset the other.
