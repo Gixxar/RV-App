@@ -9,4 +9,7 @@
     <string name="plan_needs_calculation">Choose all stop positions and calculate to preview and save.</string>
     <string name="route_estimate">%1$s miles · %2$s minutes estimated driving\nExcludes traffic and stop time. RV suitability not checked.</string>
     <string name="pick_route_stop">Choose route stop</string>
+    <string name="use_rv_dimensions">Use my RV dimensions for this route</string>
+    <string name="rv_profile_summary">%1$s\n%2$s</string>
+    <string name="rv_route_estimate">%1$s miles · %2$s minutes estimated driving\nRV dimensions applied using mapped truck restrictions. Check signs and access.</string>
 </resources>

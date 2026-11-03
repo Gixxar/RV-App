@@ -41,11 +41,13 @@ public final class Backup {
         if(root.has("checklistTemplatesVersion") && (!(root.get("checklistTemplatesVersion") instanceof Integer) || root.getInt("checklistTemplatesVersion")<0 || root.getInt("checklistTemplatesVersion")>ChecklistTemplates.VERSION))throw new JSONException("Unsupported checklist template version");
         JSONArray records = root.getJSONArray("records");
         if (records.length() > 10000) throw new JSONException("Too many records (maximum 10,000)");
+        int vehicles=0;
         for (int i=0;i<records.length();i++) {
             JSONObject record = records.getJSONObject(i);
             Module module;
             try { module = Module.valueOf(record.getString("module")); }
             catch (IllegalArgumentException e) { throw new JSONException("Unknown logbook area"); }
+            if(module==Module.VEHICLE && ++vehicles>1)throw new JSONException("Only one RV profile is supported");
             JSONObject data = record.getJSONObject("data");
             Map<String,String> values = new LinkedHashMap<>();
             for (String field : module.fields) {

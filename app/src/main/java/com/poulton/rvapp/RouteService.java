@@ -27,9 +27,10 @@ public final class RouteService {
         for(int i=0;i<points.length();i++){JSONObject p=points.getJSONObject(i);coords.add(p.getDouble("lon")+","+p.getDouble("lat"));radii.add("500");}
         return new URL("https://router.project-osrm.org/route/v1/driving/"+coords+"?overview=full&geometries=geojson&steps=false&alternatives=false&generate_hints=false&radiuses="+radii);
     }
+    static synchronized void throttle()throws IOException{long now=android.os.SystemClock.elapsedRealtime();if(lastRequest!=0&&now-lastRequest<1100)throw new IOException("Please wait a moment before calculating again.");lastRequest=now;}
     public static JSONObject calculate(JSONArray points)throws Exception{
         URL url=url(points);
-        synchronized(RouteService.class){long now=android.os.SystemClock.elapsedRealtime();if(lastRequest!=0&&now-lastRequest<1100)throw new IOException("Please wait a moment before calculating again.");lastRequest=now;}
+        throttle();
         HttpURLConnection connection=(HttpURLConnection)url.openConnection();
         connection.setConnectTimeout(10000);connection.setReadTimeout(20000);connection.setInstanceFollowRedirects(false);
         connection.setRequestProperty("User-Agent","PoultonsRVLogbook/1.6 (+https://github.com/Gixxar/RV-App)");connection.setRequestProperty("Accept","application/json");
@@ -60,7 +61,8 @@ public final class RouteService {
     }
     public static void validatePlan(Map<String,String> values)throws JSONException{
         stops(values.getOrDefault("Route stops",""));
-        if(!TYPE.equals(values.get("Route type")))throw new JSONException("Calculate a road route first");
+        if(RvRouting.TYPE.equals(values.get("Route type")))VehicleProfile.normalized(new JSONObject(values.getOrDefault("RV profile","")));
+        else if(!TYPE.equals(values.get("Route type")))throw new JSONException("Calculate a road route first");
         for(String key:new String[]{"Distance miles","Drive minutes"}){double n=Double.parseDouble(values.getOrDefault(key,"0"));if(!Double.isFinite(n)||n<=0)throw new JSONException("Missing route estimate");}
     }
     public static UriParts leg(JSONArray stops,int index)throws JSONException{

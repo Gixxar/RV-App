@@ -120,7 +120,7 @@ public final class TravelMapActivity extends Activity {
         JSONObject root=new JSONObject();JSONArray places=new JSONArray(),routes=new JSONArray(),plans=new JSONArray();
         for(LogStore.Entry e:store.list(Module.PLACES)){JSONObject d=e.data;places.put(new JSONObject().put("id",e.id).put("name",d.optString("Name")).put("trip",d.optString("Trip")).put("date",d.optString("Date")).put("lat",d.getDouble("Latitude")).put("lon",d.getDouble("Longitude")));}
         for(LogStore.Entry e:store.list(Module.ROUTES)){JSONObject d=e.data;routes.put(new JSONObject().put("id",e.id).put("name",d.optString("Name")).put("trip",d.optString("Trip")).put("date",d.optString("Date")).put("type",d.optString("Route type")).put("segments",GeoData.parse(d.getString("Route points"))));}
-        for(LogStore.Entry e:store.list(Module.PLANS)){JSONObject d=e.data;plans.put(new JSONObject().put("id",e.id).put("name",d.optString("Name")).put("trip",d.optString("Trip")).put("date",d.optString("Date")).put("type",RouteService.TYPE+" · RV suitability not checked").put("segments",GeoData.parse(d.getString("Route points"))));}
+        for(LogStore.Entry e:store.list(Module.PLANS)){JSONObject d=e.data;plans.put(new JSONObject().put("id",e.id).put("name",d.optString("Name")).put("trip",d.optString("Trip")).put("date",d.optString("Date")).put("type",RvRouting.description(d)).put("segments",GeoData.parse(d.getString("Route points"))));}
         return root.put("places",places).put("routes",routes).put("plans",plans);
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==50&&result==RESULT_OK)recreate();}

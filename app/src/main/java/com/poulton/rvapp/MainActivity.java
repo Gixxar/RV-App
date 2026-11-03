@@ -27,6 +27,7 @@ public final class MainActivity extends Activity {
     private LogStore store;
     private LinearLayout content,appRoot;
     private String currentScreen="Overview";
+    private int campsiteFilter;
     private Module selected;
     private JSONObject draft;
     private long editId;
@@ -35,7 +36,7 @@ public final class MainActivity extends Activity {
     private final java.util.concurrent.ExecutorService imports=java.util.concurrent.Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); store = new LogStore(this);
+        super.onCreate(state); store = new LogStore(this);if(state!=null)campsiteFilter=state.getInt("campsiteFilter",0);
         ServiceNotifications.schedule(this);
         ServiceNotifications.refresh(this);
         if (state != null && state.containsKey("module")) {
@@ -75,7 +76,7 @@ public final class MainActivity extends Activity {
         });
     }
     private String singular(Module module){
-        switch(module){case PLANS:return "route plan";case TRIPS:return "trip";case CHECKS:case ARRIVAL:return "check";case FUEL:return "fuel entry";case EXPENSES:return "expense";case MAINTENANCE:return "maintenance record";case CAMPSITES:return "campsite";case PHOTOS:return "photo";case MILEAGE:return "mileage reading";case REMINDERS:return "service reminder";case PLACES:return "visited place";default:return "route";}
+        switch(module){case VEHICLE:return "RV profile";case PLANS:return "route plan";case TRIPS:return "trip";case CHECKS:case ARRIVAL:return "check";case FUEL:return "fuel entry";case EXPENSES:return "expense";case MAINTENANCE:return "maintenance record";case CAMPSITES:return "campsite";case PHOTOS:return "photo";case MILEAGE:return "mileage reading";case REMINDERS:return "service reminder";case PLACES:return "visited place";default:return "route";}
     }
     private void bottomNavigation(boolean dashboard){
         LinearLayout nav=new LinearLayout(this);nav.setBackgroundColor(AdventureStyle.CARD);nav.setPadding(dp(10),dp(8),dp(10),dp(8));appRoot.addView(nav);
@@ -108,10 +109,10 @@ public final class MainActivity extends Activity {
         section("Ready for the road",AdventureStyle.GREEN);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");
         section("Your logbook",AdventureStyle.GREEN);
         moduleGrid(new Module[]{Module.PLANS,Module.MAINTENANCE,Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MILEAGE,Module.PLACES,Module.ROUTES});
-        section("Your data",AdventureStyle.GREEN);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
+        section("Your data",AdventureStyle.GREEN);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("Backup & restore",this::backups);text("Version 1.6 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.7 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -152,9 +153,9 @@ public final class MainActivity extends Activity {
         TextView detail=new TextView(this);detail.setText(getString(R.string.empty_detail,singular(module)));detail.setTextSize(14);detail.setTextColor(AdventureStyle.MUTED);detail.setGravity(android.view.Gravity.CENTER);card.addView(detail);
     }
     private void list(Module module) {
-        selected = module; draft = null; screen(module.title); TextView count=text(store.list(module).size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
+        selected = module; draft = null; screen(module.title); JSONObject rv=VehicleProfile.current(store);java.util.List<LogStore.Entry> rows=new java.util.ArrayList<>(store.list(module));if(module==Module.CAMPSITES&&campsiteFilter!=0)rows.removeIf(e->{int fit=VehicleProfile.fit(e.data,rv).status;return campsiteFilter==1?fit!=1:campsiteFilter==2?fit!=2:fit!=0;});TextView count=text(rows.size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
         if(module==Module.ROUTES)button("Plan a route",()->openPlanner(0));
-        if(module==Module.CAMPSITES)button("Import Google Maps list",this::campsiteImportHelp);
+        if(module==Module.CAMPSITES){button("My RV dimensions",this::openVehicle);text(VehicleProfile.summary(rv),14);button("Import Google Maps list",this::campsiteImportHelp);Spinner filter=new Spinner(this);filter.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"All campsites","Within recorded RV limits","Exceeds recorded RV limits","Needs confirmation"}));filter.setSelection(campsiteFilter);content.addView(filter);filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(position!=campsiteFilter){campsiteFilter=position;list(Module.CAMPSITES);}}});text("Fit uses recorded site limits only. Missing limits need confirmation. Pitch availability is recorded manually; contact the campsite for current spaces.",14);}
         if(module == Module.PLACES || module == Module.ROUTES){
             button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
             if(module==Module.ROUTES)button("Import GPX track",this::chooseGpx);
@@ -168,17 +169,19 @@ public final class MainActivity extends Activity {
             text("Due when either date or mileage is reached. Mileage uses your highest logged reading. Android checks approximately daily; battery settings may delay alerts.",16);
             button("Notification settings",this::notificationSettings);
         }
-        if (store.list(module).isEmpty()) emptyState(module);
-        for (LogStore.Entry e : store.list(module)) {
+        if(rows.isEmpty()){if(module==Module.CAMPSITES&&!store.list(module).isEmpty())text("No campsites match this fit filter. Choose All campsites or add site limits.",16);else emptyState(module);}
+        for (LogStore.Entry e : rows) {
             LinearLayout parent = content;
             LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(12),dp(16),dp(12));
             card.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,AdventureStyle.BORDER));
             LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1,-2); cardLp.setMargins(0,dp(12),0,dp(4)); parent.addView(card,cardLp); content=card;
             LinearLayout recordContent=content;
             TextView recordTitle=new TextView(this);recordTitle.setText(e.data.optString(module.fields[0],module.title));recordTitle.setTypeface(AdventureStyle.DISPLAY);recordTitle.setTextSize(18);recordTitle.setTextColor(AdventureStyle.INK);recordTitle.setPadding(0,dp(2),0,dp(8));recordContent.addView(recordTitle);
+            if(module==Module.CAMPSITES){VehicleProfile.Fit fit=VehicleProfile.fit(e.data,rv);TextView fitView=text(fit.message,15);fitView.setTextColor(fit.status==2?AdventureStyle.DANGER:fit.status==1?AdventureStyle.GREEN:AdventureStyle.MUTED);text(VehicleProfile.availability(e.data),14);}
+            if(module==Module.PLANS)text(RvRouting.description(e.data),14);
             StringBuilder label = new StringBuilder();
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
-            for (String field : module.fields) if (!field.equals(module.fields[0]) && !field.equals("Route points") && !field.equals("Route stops") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
+            for (String field : module.fields) if (!field.equals(module.fields[0]) && !field.equals("Route points") && !field.equals("Route stops") && !field.equals("RV profile") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
             if(module==Module.ROUTES)try{org.json.JSONArray segments=GeoData.parse(e.data.optString("Route points"));label.append(GeoData.pointCount(segments)).append(" points · ").append(String.format(Locale.UK,"%.1f",GeoData.miles(segments))).append(" path miles\n");}catch(Exception ignored){}
             if (module == Module.REMINDERS) {
                 CheckBox check = new CheckBox(this); check.setText(R.string.service_completed); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
@@ -214,6 +217,7 @@ public final class MainActivity extends Activity {
             button("Open travel map",this::openMapFromEditor);
             button("Import GPX file",()->confirmGpxReplace());
         }
+        if(selected==Module.CAMPSITES)text("Enter the campsite’s maximum accepted RV dimensions and weight from its operator or listing. Leave unknown limits blank. Confirm entrance, turning space and pitch/awning room separately. Availability is a manual report, not a live booking check.",14);
         for (String field : selected.fields) {
             if(field.equals("Route points")||field.equals("Route type"))continue;
             TextView fieldLabel=text(field + (selected.required(field) ? " *" : ""),13);fieldLabel.setTypeface(AdventureStyle.DISPLAY);
@@ -224,6 +228,7 @@ public final class MainActivity extends Activity {
             input.setTextColor(AdventureStyle.TEXT);input.setHintTextColor(0xff756b59);input.setMinHeight(dp(52));
             input.setBackground(AdventureStyle.input(this));input.setPadding(dp(14),dp(12),dp(14),dp(12));input.setTypeface(AdventureStyle.BODY);input.setTextSize(16);
             input.setText(draft.optString(field));
+            if(java.util.Arrays.asList(VehicleProfile.LIMITS).contains(field))input.setHint("Leave blank if unknown");
             if (id == 0 && field.equals("Date") && draft.optString(field).isEmpty() && !(selected==Module.ROUTES && draft.optString("Route type").startsWith("GPX"))) input.setText(LocalDate.now().toString());
             if (field.equals("Notes")) { input.setMinLines(3); input.setGravity(android.view.Gravity.TOP); }
             if(field.toLowerCase(Locale.ROOT).contains("date")){
@@ -231,6 +236,7 @@ public final class MainActivity extends Activity {
                 dateRow.addView(input,new LinearLayout.LayoutParams(0,-2,1));Button pick=makeButton("Pick date",()->pickDate(input));pick.setTextSize(13);LinearLayout.LayoutParams pickLp=new LinearLayout.LayoutParams(dp(86),-2);pickLp.setMargins(dp(8),0,0,0);dateRow.addView(pick,pickLp);
             }else content.addView(input);
             inputs.put(field,input);
+            if(field.equals("Availability"))button("Choose availability status",()->new AlertDialog.Builder(this).setTitle("Recorded pitch availability").setItems(VehicleProfile.AVAILABILITY,(d,index)->input.setText(VehicleProfile.AVAILABILITY[index])).setNegativeButton("Cancel",null).show());
             if(field.equals("Trip"))button("Choose saved trip",()->{
                 java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();names.add("");
                 for(LogStore.Entry trip:store.list(Module.TRIPS))names.add(trip.data.optString("Name"));
@@ -285,6 +291,7 @@ public final class MainActivity extends Activity {
             else return;
             editor(record,0);return;
         }
+        if(request==44&&result==RESULT_OK){if(selected==Module.CAMPSITES)list(Module.CAMPSITES);else home();return;}
         if(request==43&&result==RESULT_OK){list(Module.PLANS);return;}
         if(request==42&&result==RESULT_OK&&data!=null&&data.getData()!=null){importCampsites(data.getData());return;}
         if(request==41&&result==RESULT_OK&&data!=null&&data.getData()!=null){importGpx(data.getData());return;}
@@ -298,7 +305,7 @@ public final class MainActivity extends Activity {
         }
     }
     @Override protected void onSaveInstanceState(Bundle state) {
-        super.onSaveInstanceState(state);state.putString("section",currentScreen);
+        super.onSaveInstanceState(state);state.putInt("campsiteFilter",campsiteFilter);state.putString("section",currentScreen);
         if (selected != null) state.putString("module",selected.name());
         if (draft != null) { collect(); state.putString("draft",draft.toString()); state.putLong("editId",editId); }
     }
@@ -371,6 +378,7 @@ public final class MainActivity extends Activity {
             }
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
     }
+    private void openVehicle(){startActivityForResult(new Intent(this,VehicleProfileActivity.class),44);}
     private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id),43);}
     private void campsiteImportHelp(){
         new AlertDialog.Builder(this).setTitle("Import Google Maps campsites")
