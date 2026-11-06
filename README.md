@@ -144,3 +144,13 @@ Tests cover date/amount validation, due boundaries, SQLite persistence/edit/dele
 One application module, Java 17, native Android views and SQLite, plus a restricted WebView with bundled Leaflet 1.9.4 for the travel map. `Module` defines stable persisted keys; `Rules` validates forms/imports; `LogStore` owns SQLite; `Backup` validates and transfers records; `ServiceNotifications` manages Android jobs/channels; `MainActivity` owns the logbook screens; `TravelMapActivity`, `GeoData` and `GpxImport` handle maps and route geometry.
 
 Database schema version 2 stores module-tagged JSON; its non-destructive upgrade installs the poster checklists. `ChecklistTemplates` owns the transcribed defaults and migration rules. Keep field keys stable; introduce explicit, non-destructive migrations before schema changes. Tests use JUnit 4 and Robolectric.
+
+### Trip workflows (1.8)
+
+Open a trip dashboard from Trip logs. Start trip creates a fresh departure checklist from your current template; Arrive creates its setup checklist. Each item has Not started, Done, Not applicable or Needs attention status and notes. Finish preserves the history. Global template ticks remain independent. Unresolved checks require confirmation before advancing.
+
+The dashboard shows recorded distance and linked fuel, expense and maintenance costs. Add records from a trip, choose a trip in an existing record editor, or use Link or unlink an existing record on the dashboard. Permanent IDs preserve associations through trip renames and JSON backup/restore. Older text-only trip labels require explicit linking; they are not guessed. Routes planned from a trip select that trip automatically; planned routes remain distinct from travelled routes.
+
+When completing a service reminder, Record work opens a maintenance form. Saving records the work, completes the reminder and creates any repeat together. Cancel leaves it pending. Complete alone remains available. A retry cannot create duplicate completion records. Service-linked maintenance and reminders show their connection in record lists.
+
+Photo files still are not embedded in JSON backups. Physical Samsung installation, photo-provider behavior and background notification delivery require device acceptance testing.

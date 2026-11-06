@@ -41,7 +41,7 @@ public final class Backup {
         if(root.has("checklistTemplatesVersion") && (!(root.get("checklistTemplatesVersion") instanceof Integer) || root.getInt("checklistTemplatesVersion")<0 || root.getInt("checklistTemplatesVersion")>ChecklistTemplates.VERSION))throw new JSONException("Unsupported checklist template version");
         JSONArray records = root.getJSONArray("records");
         if (records.length() > 10000) throw new JSONException("Too many records (maximum 10,000)");
-        int vehicles=0;
+        int vehicles=0;java.util.Set<String> tripIds=new java.util.HashSet<>(),reminderIds=new java.util.HashSet<>();
         for (int i=0;i<records.length();i++) {
             JSONObject record = records.getJSONObject(i);
             Module module;
@@ -49,6 +49,8 @@ public final class Backup {
             catch (IllegalArgumentException e) { throw new JSONException("Unknown logbook area"); }
             if(module==Module.VEHICLE && ++vehicles>1)throw new JSONException("Only one RV profile is supported");
             JSONObject data = record.getJSONObject("data");
+            if(module==Module.TRIPS&&!data.optString("Trip ID").isEmpty()&&!tripIds.add(data.optString("Trip ID")))throw new JSONException("Duplicate trip ID");
+            if(module==Module.REMINDERS&&!data.optString("Reminder ID").isEmpty()&&!reminderIds.add(data.optString("Reminder ID")))throw new JSONException("Duplicate reminder ID");
             Map<String,String> values = new LinkedHashMap<>();
             for (String field : module.fields) {
                 if (data.has(field) && !(data.get(field) instanceof String)) throw new JSONException("Invalid field type: " + field);

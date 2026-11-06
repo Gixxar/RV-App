@@ -80,6 +80,7 @@ public class LogbookTest {
         try (ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()) {
             MainActivity a=controller.get();
             for (Module m:Module.values()) {
+                if(m==Module.TRIP_CHECKS)continue; // Internal snapshots open from a trip dashboard.
                 Button b=findButton(a.getWindow().getDecorView(),m==Module.REMINDERS?"Service reminders":m.title);
                 assertNotNull(m.title,b);b.performClick();
                 if(m==Module.VEHICLE){assertEquals(VehicleProfileActivity.class.getName(),Shadows.shadowOf(a).getNextStartedActivityForResult().intent.getComponent().getClassName());continue;}
