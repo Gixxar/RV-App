@@ -78,7 +78,7 @@ public class RoutePlannerTest {
             for(int i=0;i<3;i++)pick(a,i,stops().getJSONObject(i));
             List<EditText> edits=new ArrayList<>();LogbookTest.findEdits(a.getWindow().getDecorView(),edits);edits.get(0).setText("My road plan");findSpinner(a.getWindow().getDecorView()).setSelection(1);
             a.acceptRoute(plan());assertTrue(button(a,"Save plan").isEnabled());button(a,"Save plan").performClick();assertTrue(a.isFinishing());
-            try(LogStore store=new LogStore(context)){assertEquals(1,store.list(Module.PLANS).size());assertEquals("My road plan",store.list(Module.PLANS).get(0).data.getString("Name"));assertEquals("Weekend",store.list(Module.PLANS).get(0).data.getString("Trip"));assertTrue(store.list(Module.ROUTES).isEmpty());}
+            try(LogStore store=new LogStore(context)){assertEquals(1,store.list(Module.PLANS).size());assertEquals("My road plan",store.list(Module.PLANS).get(0).data.getString("Name"));assertEquals("Weekend",store.list(Module.PLANS).get(0).data.getString("Trip"));assertEquals(store.list(Module.TRIPS).get(0).data.getString("Trip ID"),store.list(Module.PLANS).get(0).data.getString("Trip ID"));assertTrue(store.list(Module.ROUTES).isEmpty());}
         }
     }
     @Test public void changingStopsInvalidatesPreviewAndCancelKeepsSavedPlan()throws Exception{

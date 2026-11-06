@@ -55,7 +55,7 @@ public class TripWorkflowTest {
     @Test public void tripDashboardStartsTripAndOpensSnapshotEditor()throws Exception{
         String key;try(LogStore s=new LogStore(context)){key=addTrip(s,"Dashboard trip");}
         try(ActivityController<TripDashboardActivity> c=Robolectric.buildActivity(TripDashboardActivity.class,new Intent(context,TripDashboardActivity.class).putExtra("trip",key)).setup()){
-            TripDashboardActivity a=c.get();LogbookTest.findButton(a.getWindow().getDecorView(),"Start trip").performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            TripDashboardActivity a=c.get();LogbookTest.findButton(a.getWindow().getDecorView(),"Start trip").performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             assertNotNull(LogbookTest.findButton(a.getWindow().getDecorView(),"Not started"));LogbookTest.findButton(a.getWindow().getDecorView(),"Not started").performClick();assertNotNull(org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
         }
     }
@@ -71,9 +71,9 @@ public class TripWorkflowTest {
     @Test public void recordWorkCancellationLeavesReminderPendingAndSaveLinksIt()throws Exception{
         try(LogStore s=new LogStore(context)){s.save(Module.REMINDERS,0,new JSONObject().put("Service","Oil service").put("Due miles","1").put("Repeat miles","100"));}
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class,new Intent(context,MainActivity.class).putExtra("module","REMINDERS")).setup()){
-            MainActivity a=c.get();android.widget.CheckBox check=findCheck(a.getWindow().getDecorView());check.performClick();AlertDialog dialog=(AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();LogbookTest.findButton(a.getWindow().getDecorView(),"Cancel").performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            MainActivity a=c.get();android.widget.CheckBox check=findCheck(a.getWindow().getDecorView());check.performClick();AlertDialog dialog=(AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();LogbookTest.findButton(a.getWindow().getDecorView(),"Cancel").performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             try(LogStore s=new LogStore(context)){assertFalse(s.list(Module.REMINDERS).get(0).data.optBoolean("done"));assertEquals(0,s.list(Module.MAINTENANCE).size());}
-            findCheck(a.getWindow().getDecorView()).performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_NEUTRAL).performClick();c.recreate();a=c.get();LogbookTest.findButton(a.getWindow().getDecorView(),"Save").performClick();
+            findCheck(a.getWindow().getDecorView()).performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_NEUTRAL).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();c.recreate();a=c.get();LogbookTest.findButton(a.getWindow().getDecorView(),"Save").performClick();
             try(LogStore s=new LogStore(context)){assertEquals(1,s.list(Module.MAINTENANCE).size());assertEquals(2,s.list(Module.REMINDERS).size());}
         }
     }

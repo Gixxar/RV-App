@@ -20,7 +20,7 @@ public final class RoutePlannerActivity extends Activity {
     private final ExecutorService jobs=Executors.newSingleThreadExecutor();
     private EditText name,date,notes;
     private Spinner trip;
-    private final ArrayList<String> tripIds=new ArrayList<>();
+    private final ArrayList<String> tripIds=new ArrayList<>(),tripNames=new ArrayList<>();
     private LinearLayout stopsView;
     private TextView estimate;
     private Button calculate,save;
@@ -60,10 +60,10 @@ public final class RoutePlannerActivity extends Activity {
         date=field(body,"Travel date (optional)",state==null?saved.optString("Date"):state.getString("date",""),10);date.setHint("YYYY-MM-DD");
         add(body,"Pick date",()->{java.time.LocalDate today;try{today=java.time.LocalDate.parse(date.getText().toString());}catch(Exception e){today=java.time.LocalDate.now();}new DatePickerDialog(this,(d,y,m,day)->date.setText(java.time.LocalDate.of(y,m+1,day).toString()),today.getYear(),today.getMonthValue()-1,today.getDayOfMonth()).show();});
         label(body,"Link to a trip",13,AdventureStyle.MUTED);trip=new Spinner(this);ArrayList<String> names=new ArrayList<>();names.add("Unlinked");
-        tripIds.add("");String selectedId=state==null?saved.optString("Trip ID",getIntent().getStringExtra("trip")==null?"":getIntent().getStringExtra("trip")):state.getString("tripId","");
-        try(LogStore store=new LogStore(this)){for(LogStore.Entry e:store.list(Module.TRIPS)){String key=TripWorkflow.identify(e.data,"Trip ID");store.save(Module.TRIPS,e.id,e.data);names.add(e.data.optString("Name")+" · "+e.data.optString("Date"));tripIds.add(key);}}
-        if(!selectedId.isEmpty()&&!tripIds.contains(selectedId)){names.add("Previously linked trip (deleted)");tripIds.add(selectedId);}
-        if(selectedId.isEmpty()&&!saved.optString("Trip").isEmpty()){names.add(saved.optString("Trip")+" (legacy label; choose a trip to link)");tripIds.add("");}
+        tripIds.add("");tripNames.add("");String selectedId=state==null?saved.optString("Trip ID",getIntent().getStringExtra("trip")==null?"":getIntent().getStringExtra("trip")):state.getString("tripId","");
+        try(LogStore store=new LogStore(this)){for(LogStore.Entry e:store.list(Module.TRIPS)){String key=TripWorkflow.identify(e.data,"Trip ID");store.save(Module.TRIPS,e.id,e.data);names.add(e.data.optString("Name")+" · "+e.data.optString("Date"));tripIds.add(key);tripNames.add(e.data.optString("Name"));}}
+        if(!selectedId.isEmpty()&&!tripIds.contains(selectedId)){names.add("Previously linked trip (deleted)");tripIds.add(selectedId);tripNames.add(saved.optString("Trip"));}
+        if(selectedId.isEmpty()&&!saved.optString("Trip").isEmpty()){names.add(saved.optString("Trip")+" (legacy label; choose a trip to link)");tripIds.add("");tripNames.add(saved.optString("Trip"));}
         trip.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));trip.setSelection(Math.max(0,tripIds.indexOf(selectedId)));body.addView(trip);
         trip.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){boolean first=true;public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(!first)dirty=true;first=false;}});
         label(body,"Stops in travel order",20,AdventureStyle.INK);stopsView=new LinearLayout(this);stopsView.setOrientation(LinearLayout.VERTICAL);body.addView(stopsView);renderStops();
@@ -148,7 +148,7 @@ public final class RoutePlannerActivity extends Activity {
         if(computed==null||busy)return;
         try(LogStore check=new LogStore(this)){activeProfile=VehicleProfile.current(check);}if(!compatible(computed)){invalidateRoute();updateProfileNotice();toast("RV profile changed. Recalculate before saving.");return;}
         try{
-            JSONObject plan=new JSONObject(computed.toString()).put("Name",name.getText().toString().trim()).put("Date",date.getText().toString().trim()).put("Trip",trip.getSelectedItemPosition()==0?"":trip.getSelectedItem().toString()).put("Notes",notes.getText().toString().trim()).put("Trip ID",tripIds.get(trip.getSelectedItemPosition()));
+            JSONObject plan=new JSONObject(computed.toString()).put("Name",name.getText().toString().trim()).put("Date",date.getText().toString().trim()).put("Trip",tripNames.get(trip.getSelectedItemPosition())).put("Notes",notes.getText().toString().trim()).put("Trip ID",tripIds.get(trip.getSelectedItemPosition()));
             Map<String,String> values=new HashMap<>();for(String field:Module.PLANS.fields)values.put(field,plan.optString(field));String error=Rules.validateRecord(Module.PLANS,values);if(error!=null){toast(error);return;}
             try(LogStore store=new LogStore(this)){store.save(Module.PLANS,editId,plan);}dirty=false;setResult(RESULT_OK);finish();
         }catch(Exception e){toast("Could not save this plan. Your draft is still open.");}
