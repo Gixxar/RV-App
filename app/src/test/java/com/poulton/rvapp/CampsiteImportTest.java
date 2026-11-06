@@ -98,7 +98,10 @@ public class CampsiteImportTest {
             preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             awaitCampCount(1);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             try(LogStore store=new LogStore(context)){assertEquals("Coast",store.list(Module.CAMPSITES).get(0).data.getString("Name"));}
-            LogbookTest.findButton(a.getWindow().getDecorView(),"Open in Google Maps").performClick();
+            // The database commit can finish just before the UI refresh is posted.
+            long uiDeadline=System.currentTimeMillis()+5000;android.widget.Button open;
+            do{Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();open=LogbookTest.findButton(a.getWindow().getDecorView(),"Open in Google Maps");if(open==null)Thread.sleep(10);}while(open==null&&System.currentTimeMillis()<uiDeadline);
+            assertNotNull("Import UI did not finish refreshing",open);open.performClick();
             assertEquals(Uri.parse(A),Shadows.shadowOf(a).getNextStartedActivity().getData());
         }
     }
