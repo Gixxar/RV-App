@@ -33,7 +33,7 @@ public final class TravelMapActivity extends Activity {
             if(Build.VERSION.SDK_INT>=30){Insets b=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);}
             else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;
         });
-        TextView title=new TextView(this);title.setText(pickingStop?R.string.pick_route_stop:R.string.travel_map_title);title.setTypeface(AdventureStyle.DISPLAY);title.setTextSize(21);title.setTextColor(AdventureStyle.INK);title.setPadding(dp(12),dp(10),dp(12),dp(5));page.addView(title);
+        TextView title=new TextView(this);title.setText(pickingStop?(getIntent().getBooleanExtra("campsite_location",false)?"Choose campsite entrance":getString(R.string.pick_route_stop)):getString(R.string.travel_map_title));title.setTypeface(AdventureStyle.DISPLAY);title.setTextSize(21);title.setTextColor(AdventureStyle.INK);title.setPadding(dp(12),dp(10),dp(12),dp(5));page.addView(title);
         LinearLayout top=new LinearLayout(this);page.addView(top);control(top,"Back",this::finish);control(top,"Fit all",()->js("fitAll()"));control(top,"Find place",this::findPlace);
         LinearLayout tools=new LinearLayout(this);page.addView(tools);
         if(pickingStop)control(tools,getIntent().getBooleanExtra("campsite_location",false)?"Choose campsite entrance":"Choose stop on map",()->js(getIntent().getBooleanExtra("campsite_location",false)?"pickCampsite()":"pickStop()"));
@@ -130,7 +130,7 @@ public final class TravelMapActivity extends Activity {
         if(campsiteStatus!=null){
             JSONArray sites=payload.optJSONArray("campsites");int located=sites==null?0:sites.length(),missing=payload.optInt("missingCampsites");
             campsiteStatus.setText((locationProgress.isEmpty()?"":locationProgress+"\n")+located+" campsites located · "+missing+" need a location. Search pins need checking; edit a campsite to move its pin. Campsites are not recorded visits.");
-            locateButton.setText(locating?"Stop locating":"Locate campsites");locateButton.setEnabled(locating||missing>0);
+            locateButton.setText(locating?(stopLocating?"Stopping…":"Stop locating"):"Locate campsites");locateButton.setEnabled(locating?!stopLocating:missing>0);
         }
     }
     private void refreshCampsites(){loadPayload();js("updateLogbook("+payload.toString()+")");}
@@ -204,5 +204,6 @@ public final class TravelMapActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==50&&result==RESULT_OK)recreate();}
     @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putString("filter",filter);}
+    @Override protected void onStop(){if(locating)stopLocating=true;super.onStop();}
     @Override protected void onDestroy(){stopLocating=true;search.shutdownNow();if(web!=null){((LinearLayout)web.getParent()).removeView(web);web.destroy();web=null;}super.onDestroy();}
 }
