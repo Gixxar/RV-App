@@ -123,7 +123,7 @@ public final class MainActivity extends Activity {
         section("Your data",AdventureStyle.accent(Module.PLACES));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.10 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.11 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -167,7 +167,7 @@ public final class MainActivity extends Activity {
         selected = module; draft = null; screen(module.title); JSONObject rv=VehicleProfile.current(store);java.util.List<LogStore.Entry> rows=new java.util.ArrayList<>(store.list(module));if(!scopedTrip.isEmpty())rows.removeIf(e->!scopedTrip.equals(e.data.optString("Trip ID")));if(module==Module.CAMPSITES&&campsiteFilter!=0)rows.removeIf(e->{int fit=VehicleProfile.fit(e.data,rv).status;return campsiteFilter==1?fit!=1:campsiteFilter==2?fit!=2:fit!=0;});TextView count=text(rows.size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
         if(!scopedTrip.isEmpty())button("Back to trip",this::finish);
         if(module==Module.ROUTES)button("Plan a route",()->openPlanner(0));
-        if(module==Module.CAMPSITES){button("My RV dimensions",this::openVehicle);text(VehicleProfile.summary(rv),14);button("Import Google Maps list",this::campsiteImportHelp);Spinner filter=new Spinner(this);filter.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"All campsites","Within recorded RV limits","Exceeds recorded RV limits","Needs confirmation"}));filter.setSelection(campsiteFilter);content.addView(filter);filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(position!=campsiteFilter){campsiteFilter=position;list(Module.CAMPSITES);}}});text("Fit uses recorded site limits only. Missing limits need confirmation. Pitch availability is recorded manually; contact the campsite for current spaces.",14);}
+        if(module==Module.CAMPSITES){button("My RV dimensions",this::openVehicle);text(VehicleProfile.summary(rv),14);button("Import Google Maps list",this::campsiteImportHelp);button("View campsites on map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));Spinner filter=new Spinner(this);filter.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"All campsites","Within recorded RV limits","Exceeds recorded RV limits","Needs confirmation"}));filter.setSelection(campsiteFilter);content.addView(filter);filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(position!=campsiteFilter){campsiteFilter=position;list(Module.CAMPSITES);}}});text("Fit uses recorded site limits only. Missing limits need confirmation. Pitch availability is recorded manually; contact the campsite for current spaces.",14);}
         if(module == Module.PLACES || module == Module.ROUTES){
             button("View travel map",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
             if(module==Module.ROUTES)button("Import GPX track",this::chooseGpx);
@@ -213,7 +213,7 @@ public final class MainActivity extends Activity {
                 try { startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(e.data.optString("uri")),"image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); }
                 catch (RuntimeException ex) { toast("Photo unavailable. Edit this record to choose it again."); }
             });
-            if(module==Module.CAMPSITES){String maps=CampsiteImport.link(e.data);if(maps!=null)button("Open in Google Maps",()->openWeb(maps));}
+            if(module==Module.CAMPSITES){text(CampsiteLocations.position(e.data)==null?"Map location not set · open the map to locate campsites":e.data.optString("Location source","Saved map location"),14);String maps=CampsiteImport.link(e.data);if(maps!=null)button("Open in Google Maps",()->openWeb(maps));}
             if(module==Module.TRIPS){String key=TripWorkflow.identify(e.data,"Trip ID");store.save(module,e.id,e.data);button("Open trip dashboard",()->startActivity(new Intent(this,TripDashboardActivity.class).putExtra("trip",key)));}
             if(module==Module.MAINTENANCE&&!e.data.optString("Source reminder ID").isEmpty())text("Linked to completed service reminder",14);
             if(module==Module.REMINDERS&&e.data.optBoolean("done")){for(LogStore.Entry work:store.list(Module.MAINTENANCE))if(!e.data.optString("Reminder ID").isEmpty()&&e.data.optString("Reminder ID").equals(work.data.optString("Source reminder ID")))text("Maintenance recorded: "+work.data.optString("Work")+" · "+work.data.optString("Date"),14);}
@@ -237,6 +237,10 @@ public final class MainActivity extends Activity {
         if(selected==Module.REMINDERS){
             text("Set the last service date/mileage and repeat intervals, or enter the first due date/mileage directly. Date or mileage, whichever comes first. Use your manufacturer’s intervals; leave unknown history blank.",14);
             button("Choose service name",()->new AlertDialog.Builder(this).setTitle("Service name only — set your own intervals").setItems(ServiceSchedule.SUGGESTIONS,(d,i)->inputs.get("Service").setText(ServiceSchedule.SUGGESTIONS[i])).setNegativeButton("Cancel",null).show());
+        }
+        if(selected==Module.CAMPSITES){
+            text("Campsites with coordinates appear on the map. Use Locate campsites on the map to search imported names, or choose the entrance yourself. Saving a location does not record a visit.",14);
+            button("Choose campsite location on map",()->{collect();Intent intent=new Intent(this,TravelMapActivity.class).putExtra("pick_stop",true).putExtra("campsite_location",true);double[] point=CampsiteLocations.position(draft);if(point!=null)intent.putExtra("initial_lat",point[0]).putExtra("initial_lon",point[1]);startActivityForResult(intent,45);});
         }
         if(selected==Module.CAMPSITES)text("Enter the campsite’s maximum accepted RV dimensions and weight from its operator or listing. Leave unknown limits blank. Confirm entrance, turning space and pitch/awning room separately. Availability is a manual report, not a live booking check.",14);
         for (String field : selected.fields) {
@@ -283,7 +287,8 @@ public final class MainActivity extends Activity {
     }
     private void collect() { for (Map.Entry<String,EditText> e : inputs.entrySet()) put(draft,e.getKey(),e.getValue().getText().toString().trim()); }
     private void save() {
-        collect(); boolean invalid = false;
+        String oldLat=draft.optString("Latitude"),oldLon=draft.optString("Longitude");collect();
+        if(selected==Module.CAMPSITES&&(!oldLat.equals(draft.optString("Latitude"))||!oldLon.equals(draft.optString("Longitude"))))put(draft,"Location source",draft.optString("Latitude").isEmpty()?"":"Manually entered coordinates"); boolean invalid = false;
         for (Map.Entry<String,EditText> e : inputs.entrySet()) {
             String value = draft.optString(e.getKey()); String error = Rules.validate(e.getKey(),value);
             if (selected.required(e.getKey()) && value.isEmpty()) error = "Required";
@@ -301,6 +306,10 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
+        if(request==45&&result==RESULT_OK&&data!=null&&selected==Module.CAMPSITES&&draft!=null){
+            try{double lat=Double.parseDouble(data.getStringExtra("Latitude")),lon=Double.parseDouble(data.getStringExtra("Longitude"));if(!GeoData.valid(lat,lon))throw new IllegalArgumentException();collect();CampsiteLocations.set(draft,lat,lon,"Chosen on map — check entrance");inputs.get("Latitude").setText(draft.optString("Latitude"));inputs.get("Longitude").setText(draft.optString("Longitude"));}
+            catch(Exception e){toast("Choose the campsite location again");}return;
+        }
         if(request==40&&result==RESULT_OK&&data!=null){
             String action=data.getStringExtra("action");
             if("import".equals(action)){chooseGpx();return;}
@@ -400,7 +409,7 @@ public final class MainActivity extends Activity {
     private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id).putExtra("trip",scopedTrip),43);}
     private void campsiteImportHelp(){
         new AlertDialog.Builder(this).setTitle("Import Google Maps campsites")
-            .setMessage("1. Open Google Takeout and deselect all, then select Saved. Create a one-off ZIP export.\n\n2. Download the export to your phone. Choose its ZIP here, or an extracted campsite list CSV. If the ZIP has several lists, choose one.\n\n3. Review the campsites and confirm. Names, notes and Google Maps links are kept; matching links are skipped. Other saved websites are skipped. Existing records stay unchanged.\n\nThis is a file import, not live sync or a shared-list link importer. No visit dates or map pins are created. Add visited places separately on the travel map. Maximum 2,000 rows / 10 MB file / 20 MB expanded ZIP.")
+            .setMessage("1. Open Google Takeout and deselect all, then select Saved. Create a one-off ZIP export.\n\n2. Download the export to your phone. Choose its ZIP here, or an extracted campsite list CSV. If the ZIP has several lists, choose one.\n\n3. Review the campsites and confirm. Names, notes and Google Maps links are kept; matching links are skipped. Other saved websites are skipped. Existing records stay unchanged.\n\nThis is a file import, not live sync or a shared-list link importer. No visit dates are created. After importing, open View campsites on map and tap Locate campsites to search missing locations. Search results need checking. Maximum 2,000 rows / 10 MB file / 20 MB expanded ZIP.")
             .setNegativeButton("Cancel",null).setNeutralButton("Google Takeout",(d,w)->openWeb("https://takeout.google.com/"))
             .setPositiveButton("Choose file",(d,w)->startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),42)).show();
     }
