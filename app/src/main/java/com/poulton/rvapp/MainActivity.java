@@ -27,6 +27,8 @@ public final class MainActivity extends Activity {
     private LogStore store;
     private LinearLayout content,appRoot;
     private String currentScreen="Overview";
+    private String scopedTrip="";
+    private long completingReminder;
     private int campsiteFilter;
     private Module selected;
     private JSONObject draft;
@@ -37,6 +39,8 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); store = new LogStore(this);if(state!=null)campsiteFilter=state.getInt("campsiteFilter",0);
+        scopedTrip=getIntent().getStringExtra("trip")==null?"":getIntent().getStringExtra("trip");
+        if(state!=null)completingReminder=state.getLong("completingReminder");
         ServiceNotifications.schedule(this);
         ServiceNotifications.refresh(this);
         if (state != null && state.containsKey("module")) {
@@ -49,6 +53,7 @@ public final class MainActivity extends Activity {
         else if(state!=null && "Records".equals(state.getString("section"))) recordsHub();
         else if(state!=null && "Backup & restore".equals(state.getString("section"))) backups();
         else if (getIntent().getBooleanExtra("show_reminders",false)) list(Module.REMINDERS);
+        else if(getIntent().hasExtra("module"))list(Module.valueOf(getIntent().getStringExtra("module")));
         else home();
     }
     @Override protected void onResume() {
@@ -60,7 +65,7 @@ public final class MainActivity extends Activity {
         currentScreen=dashboard?"Overview":form?(editId==0?"New ":"Edit ")+singular(selected):title;
         appRoot=new LinearLayout(this);appRoot.setOrientation(LinearLayout.VERTICAL);appRoot.setBackgroundColor(AdventureStyle.PAPER);setContentView(appRoot);
         LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(6),dp(16),dp(6));toolbar.setBackgroundColor(AdventureStyle.CARD);appRoot.addView(toolbar);
-        if(!dashboard){Button back=new Button(this);back.setText("‹");back.setTextSize(28);back.setTextColor(AdventureStyle.INK);back.setBackgroundColor(android.graphics.Color.TRANSPARENT);back.setContentDescription("Back");toolbar.addView(back,new LinearLayout.LayoutParams(dp(44),dp(48)));back.setOnClickListener(v->{if(draft!=null)discardEditor();else home();});}
+        if(!dashboard){Button back=new Button(this);back.setText("‹");back.setTextSize(28);back.setTextColor(AdventureStyle.INK);back.setBackgroundColor(android.graphics.Color.TRANSPARENT);back.setContentDescription("Back");toolbar.addView(back,new LinearLayout.LayoutParams(dp(44),dp(48)));back.setOnClickListener(v->{if(draft!=null)discardEditor();else if(!scopedTrip.isEmpty())finish();else home();});}
         ImageView crest=new ImageView(this);crest.setImageResource(R.drawable.poulton_crest);crest.setContentDescription("The Poulton’s RV");crest.setScaleType(ImageView.ScaleType.FIT_CENTER);toolbar.addView(crest,new LinearLayout.LayoutParams(dp(30),dp(42)));
         LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setPadding(dp(10),0,0,0);toolbar.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
         TextView name=new TextView(this);name.setText(R.string.brand_name);name.setTypeface(AdventureStyle.DISPLAY);name.setTextColor(AdventureStyle.INK);name.setTextSize(17);brand.addView(name);
@@ -80,6 +85,7 @@ public final class MainActivity extends Activity {
     }
     private void bottomNavigation(boolean dashboard){
         LinearLayout nav=new LinearLayout(this);nav.setBackgroundColor(AdventureStyle.CARD);nav.setPadding(dp(10),dp(8),dp(10),dp(8));appRoot.addView(nav);
+        if(!scopedTrip.isEmpty()){navItem(nav,"Back to trip",Module.TRIPS,false,this::finish);return;}
         navItem(nav,"Home",Module.TRIPS,dashboard,this::home);
         navItem(nav,"Map",Module.PLACES,false,()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
         navItem(nav,"Checks",Module.CHECKS,(selected!=null&&selected.isChecklist())||currentScreen.equals("Checklists"),this::checksHub);
@@ -112,7 +118,7 @@ public final class MainActivity extends Activity {
         section("Your data",AdventureStyle.GREEN);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.7 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.GREEN);moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.GREEN);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.8 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -153,7 +159,8 @@ public final class MainActivity extends Activity {
         TextView detail=new TextView(this);detail.setText(getString(R.string.empty_detail,singular(module)));detail.setTextSize(14);detail.setTextColor(AdventureStyle.MUTED);detail.setGravity(android.view.Gravity.CENTER);card.addView(detail);
     }
     private void list(Module module) {
-        selected = module; draft = null; screen(module.title); JSONObject rv=VehicleProfile.current(store);java.util.List<LogStore.Entry> rows=new java.util.ArrayList<>(store.list(module));if(module==Module.CAMPSITES&&campsiteFilter!=0)rows.removeIf(e->{int fit=VehicleProfile.fit(e.data,rv).status;return campsiteFilter==1?fit!=1:campsiteFilter==2?fit!=2:fit!=0;});TextView count=text(rows.size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
+        selected = module; draft = null; screen(module.title); JSONObject rv=VehicleProfile.current(store);java.util.List<LogStore.Entry> rows=new java.util.ArrayList<>(store.list(module));if(!scopedTrip.isEmpty())rows.removeIf(e->!scopedTrip.equals(e.data.optString("Trip ID")));if(module==Module.CAMPSITES&&campsiteFilter!=0)rows.removeIf(e->{int fit=VehicleProfile.fit(e.data,rv).status;return campsiteFilter==1?fit!=1:campsiteFilter==2?fit!=2:fit!=0;});TextView count=text(rows.size()+" "+(module.isChecklist()?"checks":"entries"),14);count.setTextColor(AdventureStyle.MUTED);button(module==Module.PLANS?"Plan a route":"Add record", () -> {if(module==Module.PLANS)openPlanner(0);else editor(new JSONObject(),0);});
+        if(!scopedTrip.isEmpty())button("Back to trip",this::finish);
         if(module==Module.ROUTES)button("Plan a route",()->openPlanner(0));
         if(module==Module.CAMPSITES){button("My RV dimensions",this::openVehicle);text(VehicleProfile.summary(rv),14);button("Import Google Maps list",this::campsiteImportHelp);Spinner filter=new Spinner(this);filter.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"All campsites","Within recorded RV limits","Exceeds recorded RV limits","Needs confirmation"}));filter.setSelection(campsiteFilter);content.addView(filter);filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int position,long id){if(position!=campsiteFilter){campsiteFilter=position;list(Module.CAMPSITES);}}});text("Fit uses recorded site limits only. Missing limits need confirmation. Pitch availability is recorded manually; contact the campsite for current spaces.",14);}
         if(module == Module.PLACES || module == Module.ROUTES){
@@ -181,7 +188,7 @@ public final class MainActivity extends Activity {
             if(module==Module.PLANS)text(RvRouting.description(e.data),14);
             StringBuilder label = new StringBuilder();
             if (module == Module.REMINDERS && !e.data.optBoolean("done") && Rules.due(e.data.optString("Due date"),e.data.optString("Due miles"),store.latestMileage(),LocalDate.now())) label.append("DUE • ");
-            for (String field : module.fields) if (!field.equals(module.fields[0]) && !field.equals("Route points") && !field.equals("Route stops") && !field.equals("RV profile") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
+            for (String field : module.fields) if (!Module.hidden(field) && !field.equals(module.fields[0]) && !field.equals("Route points") && !field.equals("Route stops") && !field.equals("RV profile") && !e.data.optString(field).isEmpty()) label.append(field).append(": ").append(e.data.optString(field)).append("\n");
             if(module==Module.ROUTES)try{org.json.JSONArray segments=GeoData.parse(e.data.optString("Route points"));label.append(GeoData.pointCount(segments)).append(" points · ").append(String.format(Locale.UK,"%.1f",GeoData.miles(segments))).append(" path miles\n");}catch(Exception ignored){}
             if (module == Module.REMINDERS) {
                 CheckBox check = new CheckBox(this); check.setText(R.string.service_completed); check.setTextColor(AdventureStyle.TEXT);check.setButtonTintList(android.content.res.ColorStateList.valueOf(AdventureStyle.GREEN)); check.setMinHeight(dp(48)); check.setChecked(e.data.optBoolean("done"));
@@ -190,8 +197,8 @@ public final class MainActivity extends Activity {
                 check.setOnCheckedChangeListener((v,done)->{
                     if (module == Module.REMINDERS && done) {
                         check.setOnCheckedChangeListener(null); check.setChecked(false);
-                        new AlertDialog.Builder(this).setTitle("Complete service?").setMessage("Mark this reminder completed? If a repeat interval is set, a new reminder will start from today and your current logged mileage. Record the work separately under Maintenance.")
-                            .setNegativeButton("Cancel",(d,w)->list(module)).setPositiveButton("Complete",(d,w)->completeReminder(e)).setOnCancelListener(d->list(module)).show();
+                        new AlertDialog.Builder(this).setTitle("Complete service?").setMessage("Mark this reminder completed? If a repeat interval is set, a new reminder will start from today and your current logged mileage. Choose Record work to save a linked maintenance entry and complete this reminder together.")
+                            .setNegativeButton("Cancel",(d,w)->list(module)).setNeutralButton("Record work",(d,w)->recordService(e)).setPositiveButton("Complete",(d,w)->completeReminder(e)).setOnCancelListener(d->list(module)).show();
                     } else { put(e.data,"done",done); store.save(module,e.id,e.data); ServiceNotifications.refresh(this); list(module); }
                 });
             }
@@ -201,12 +208,16 @@ public final class MainActivity extends Activity {
                 catch (RuntimeException ex) { toast("Photo unavailable. Edit this record to choose it again."); }
             });
             if(module==Module.CAMPSITES){String maps=CampsiteImport.link(e.data);if(maps!=null)button("Open in Google Maps",()->openWeb(maps));}
+            if(module==Module.TRIPS){String key=TripWorkflow.identify(e.data,"Trip ID");store.save(module,e.id,e.data);button("Open trip dashboard",()->startActivity(new Intent(this,TripDashboardActivity.class).putExtra("trip",key)));}
+            if(module==Module.MAINTENANCE&&!e.data.optString("Source reminder ID").isEmpty())text("Linked to completed service reminder",14);
+            if(module==Module.REMINDERS&&e.data.optBoolean("done")){for(LogStore.Entry work:store.list(Module.MAINTENANCE))if(!e.data.optString("Reminder ID").isEmpty()&&e.data.optString("Reminder ID").equals(work.data.optString("Source reminder ID")))text("Maintenance recorded: "+work.data.optString("Work")+" · "+work.data.optString("Date"),14);}
             button("Edit record", () -> {if(module==Module.PLANS)openPlanner(e.id);else editor(e.data,e.id);});
             content = parent;
         }
     }
     private void editor(JSONObject data, long id) {
         try { draft = new JSONObject(data.toString()); } catch (org.json.JSONException e) { throw new IllegalStateException(e); }
+        if(id==0&&!scopedTrip.isEmpty()&&!draft.has("Trip ID"))put(draft,"Trip ID",scopedTrip);
         editId = id; inputs.clear(); screen((id == 0 ? "Add: " : "Edit: ") + selected.title);
         if(selected==Module.PLACES){
             text("Choose a place on the travel map, or enter decimal latitude and longitude below.",16);
@@ -219,7 +230,7 @@ public final class MainActivity extends Activity {
         }
         if(selected==Module.CAMPSITES)text("Enter the campsite’s maximum accepted RV dimensions and weight from its operator or listing. Leave unknown limits blank. Confirm entrance, turning space and pitch/awning room separately. Availability is a manual report, not a live booking check.",14);
         for (String field : selected.fields) {
-            if(field.equals("Route points")||field.equals("Route type"))continue;
+            if(Module.hidden(field)||field.equals("Status")||field.equals("Route points")||field.equals("Route type"))continue;
             TextView fieldLabel=text(field + (selected.required(field) ? " *" : ""),13);fieldLabel.setTypeface(AdventureStyle.DISPLAY);
             EditText input = new EditText(this);input.setId(View.generateViewId());fieldLabel.setLabelFor(input.getId()); input.setSingleLine(!field.equals("Notes"));
             if (Rules.isNumber(field)) input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -237,13 +248,12 @@ public final class MainActivity extends Activity {
             }else content.addView(input);
             inputs.put(field,input);
             if(field.equals("Availability"))button("Choose availability status",()->new AlertDialog.Builder(this).setTitle("Recorded pitch availability").setItems(VehicleProfile.AVAILABILITY,(d,index)->input.setText(VehicleProfile.AVAILABILITY[index])).setNegativeButton("Cancel",null).show());
-            if(field.equals("Trip"))button("Choose saved trip",()->{
-                java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();names.add("");
-                for(LogStore.Entry trip:store.list(Module.TRIPS))names.add(trip.data.optString("Name"));
-                String[] values=names.toArray(new String[0]),labels=values.clone();labels[0]="Unlinked";
-                new AlertDialog.Builder(this).setTitle("Link to a trip").setItems(labels,(d,index)->input.setText(values[index])).setNegativeButton("Cancel",null).show();
-            });
 
+
+        }
+        if(java.util.Arrays.asList(selected.fields).contains("Trip ID")&&selected!=Module.TRIPS&&completingReminder==0){
+            String name="Unlinked";for(LogStore.Entry trip:store.list(Module.TRIPS))if(draft.optString("Trip ID").equals(trip.data.optString("Trip ID")))name=trip.data.optString("Name");text("Trip: "+name,14);
+            button("Choose trip",()->{collect();java.util.List<LogStore.Entry> trips=store.list(Module.TRIPS);String[] names=new String[trips.size()+1];names[0]="Unlinked";for(int i=0;i<trips.size();i++)names[i+1]=trips.get(i).data.optString("Name")+" · "+trips.get(i).data.optString("Date");new AlertDialog.Builder(this).setItems(names,(d,i)->{String key="";if(i>0){LogStore.Entry trip=trips.get(i-1);key=TripWorkflow.identify(trip.data,"Trip ID");store.save(Module.TRIPS,trip.id,trip.data);}put(draft,"Trip ID",key);editor(draft,editId);}).setNegativeButton("Cancel",null).show();});
         }
         if (selected == Module.PHOTOS) {
             photoLabel = text(draft.optString("uri").isEmpty() ? "Choose a photo (reattach after restoring a backup)" : "Photo attached",16);
@@ -271,7 +281,7 @@ public final class MainActivity extends Activity {
         String error = Rules.validateRecord(selected,values);
         if (error != null) { toast(error); return; }
         if (selected == Module.PHOTOS && draft.optString("uri").isEmpty()) { toast("Choose a photo first"); return; }
-        try { store.save(selected,editId,draft); ServiceNotifications.refresh(this); list(selected); }
+        try { if(completingReminder!=0){TripWorkflow.complete(store,completingReminder,draft);completingReminder=0;selected=Module.REMINDERS;}else store.save(selected,editId,draft); ServiceNotifications.refresh(this); list(selected); }
         catch (RuntimeException e) { toast("Could not save. Your form is still open; please retry."); }
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -305,35 +315,27 @@ public final class MainActivity extends Activity {
         }
     }
     @Override protected void onSaveInstanceState(Bundle state) {
-        super.onSaveInstanceState(state);state.putInt("campsiteFilter",campsiteFilter);state.putString("section",currentScreen);
+        super.onSaveInstanceState(state);state.putLong("completingReminder",completingReminder);state.putInt("campsiteFilter",campsiteFilter);state.putString("section",currentScreen);
         if (selected != null) state.putString("module",selected.name());
         if (draft != null) { collect(); state.putString("draft",draft.toString()); state.putLong("editId",editId); }
     }
     @Override public void onBackPressed() {
         if (draft != null) discardEditor();
+        else if(!scopedTrip.isEmpty())finish();
         else if (selected != null || !currentScreen.equals("Overview")) home(); else super.onBackPressed();
     }
     private void discardEditor() {
-        new AlertDialog.Builder(this).setMessage("Discard unsaved changes?").setNegativeButton("Keep editing",null).setPositiveButton("Discard",(d,w)->list(selected)).show();
+        new AlertDialog.Builder(this).setMessage("Discard unsaved changes?").setNegativeButton("Keep editing",null).setPositiveButton("Discard",(d,w)->{if(completingReminder!=0){completingReminder=0;selected=Module.REMINDERS;}list(selected);}).show();
     }
     private int dp(int n) { return (int)(n*getResources().getDisplayMetrics().density); }
     private void completeReminder(LogStore.Entry entry) {
-        android.database.sqlite.SQLiteDatabase db = store.getWritableDatabase(); db.beginTransaction();
-        try {
-            JSONObject completed = new JSONObject(entry.data.toString()); put(completed,"done",true); store.save(Module.REMINDERS,entry.id,completed);
-            int months = Integer.parseInt(entry.data.optString("Repeat months","0").isEmpty()?"0":entry.data.optString("Repeat months"));
-            double miles = entry.data.optDouble("Repeat miles",0);
-            if (months > 0 || miles > 0) {
-                JSONObject next = new JSONObject(entry.data.toString()); put(next,"done",false);
-                put(next,"Due date",months > 0 ? LocalDate.now().plusMonths(months).toString() : "");
-                put(next,"Due miles",miles > 0 ? String.valueOf(store.latestMileage()+miles) : "");
-                store.save(Module.REMINDERS,0,next);
-            }
-            db.setTransactionSuccessful();
-        } catch (Exception e) { toast("Could not complete service. Please retry."); }
-        finally { db.endTransaction(); }
+        try{TripWorkflow.complete(store,entry.id,null);}catch(RuntimeException e){toast(e.getMessage());}
         ServiceNotifications.refresh(this); list(Module.REMINDERS);
     }
+    private void recordService(LogStore.Entry entry){
+        completingReminder=entry.id;selected=Module.MAINTENANCE;JSONObject data=new JSONObject();put(data,"Work",entry.data.optString("Service"));put(data,"Date",LocalDate.now().toString());put(data,"Odometer miles",String.valueOf(store.latestMileage()));put(data,"Trip ID",entry.data.optString("Trip ID"));editor(data,0);
+    }
+
     private void notificationSettings() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},30);
@@ -379,7 +381,7 @@ public final class MainActivity extends Activity {
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
     }
     private void openVehicle(){startActivityForResult(new Intent(this,VehicleProfileActivity.class),44);}
-    private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id),43);}
+    private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id).putExtra("trip",scopedTrip),43);}
     private void campsiteImportHelp(){
         new AlertDialog.Builder(this).setTitle("Import Google Maps campsites")
             .setMessage("1. Open Google Takeout and deselect all, then select Saved. Create a one-off ZIP export.\n\n2. Download the export to your phone. Choose its ZIP here, or an extracted campsite list CSV. If the ZIP has several lists, choose one.\n\n3. Review the campsites and confirm. Names, notes and Google Maps links are kept; matching links are skipped. Other saved websites are skipped. Existing records stay unchanged.\n\nThis is a file import, not live sync or a shared-list link importer. No visit dates or map pins are created. Add visited places separately on the travel map. Maximum 2,000 rows / 10 MB file / 20 MB expanded ZIP.")

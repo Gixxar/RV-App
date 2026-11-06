@@ -47,6 +47,9 @@ public final class Rules {
             String error = validate(field,value);
             if (error != null) return field + ": " + error;
         }
+        if(module==Module.TRIPS&&!values.getOrDefault("Status","").isEmpty()&&!java.util.Arrays.asList("Planned","In progress","Arrived","Finished").contains(values.get("Status")))return "Invalid trip status";
+        if(module==Module.TRIP_CHECKS){if(values.getOrDefault("Trip ID","").isEmpty())return "Trip ID is required";if(!java.util.Arrays.asList("Departure","Arrival").contains(values.get("Phase")))return "Invalid checklist phase";if(!java.util.Arrays.asList(TripWorkflow.STATES).contains(values.get("Status")))return "Invalid checklist status";}
+        if(module==Module.TRIPS&&both(values,"Date","End date")&&LocalDate.parse(values.get("End date")).isBefore(LocalDate.parse(values.get("Date"))))return "End date must be on or after start date";
         if(module==Module.PLANS){try{RouteService.validatePlan(values);}catch(Exception e){return "Calculate a valid road route before saving";}}
         if(module==Module.ROUTES && (RouteService.TYPE.equals(values.get("Route type"))||RvRouting.TYPE.equals(values.get("Route type"))))return "Save planned routes under Route plans";
         if(module==Module.CAMPSITES && ("Spaces reported".equals(values.get("Availability"))||"Fully booked".equals(values.get("Availability"))) && values.getOrDefault("Availability checked date","").isEmpty())return "Record the availability checked date";
