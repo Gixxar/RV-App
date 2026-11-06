@@ -50,7 +50,7 @@ public final class LogStore extends SQLiteOpenHelper {
     }
     public void save(Module module, long id, JSONObject data) {
         if(module==Module.TRIPS)TripWorkflow.identify(data,"Trip ID");
-        if(module==Module.REMINDERS)TripWorkflow.identify(data,"Reminder ID");
+        if(module==Module.REMINDERS){TripWorkflow.identify(data,"Reminder ID");TripWorkflow.identify(data,"Schedule ID");}
         ContentValues row = new ContentValues(); row.put("module", module.name()); row.put("data", data.toString());
         if (id == 0) getWritableDatabase().insertOrThrow("entries", null, row);
         else getWritableDatabase().update("entries", row, "id=? AND module=?", new String[]{String.valueOf(id), module.name()});
@@ -71,9 +71,9 @@ public final class LogStore extends SQLiteOpenHelper {
     }
     public double latestMileage() {
         double miles = 0;
-        for (Module m : new Module[]{Module.MILEAGE, Module.FUEL, Module.MAINTENANCE, Module.TRIPS})
+        for (Module m : new Module[]{Module.MILEAGE, Module.FUEL, Module.MAINTENANCE, Module.TRIPS, Module.REMINDERS})
             for (Entry e : list(m)) {
-                miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : "Odometer miles", 0));
+                miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : m==Module.REMINDERS ? "Last service miles" : "Odometer miles", 0));
                 if (m == Module.TRIPS) miles = Math.max(miles,e.data.optDouble("Start miles",0));
             }
         return miles;

@@ -158,3 +158,9 @@ Photo files still are not embedded in JSON backups. Physical Samsung installatio
 ### Colour refresh (1.9)
 
 Distinct blue trips/mileage, purple route plans, teal maps, green checklists/campsites, orange fuel, pink expenses, coral maintenance and violet photo cards. The home screen, trip dashboard, navigation and record forms use matching accents, with white text on saturated cards and dark text on pale surfaces. Checklist states retain their text labels as well as colours. No record or backup schema changes.
+
+### Service schedule (1.10)
+
+Open Service schedule from Home, Records or Service reminders. Existing reminders appear automatically; filter active, due/overdue, due soon (30 days or 500 miles) and completed services. Add a service with a category, last serviced date/mileage and repeating month/mileage intervals. Missing first due values can be calculated from recorded history, or entered directly when history is unknown. Suggested names do not prescribe intervals: use your equipment service manuals.
+
+Record service opens the linked maintenance form. Save completes the service and creates the next reminder from the actual service date and odometer reading (falling back to today/highest logged mileage if absent). A historic service may therefore already be due again. The schedule links to its maintenance history, with IDs and interval/history fields preserved in JSON backups. Existing daily Android notifications use the same due records. No SQLite schema change.

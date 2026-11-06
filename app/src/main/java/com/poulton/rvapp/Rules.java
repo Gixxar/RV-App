@@ -23,7 +23,7 @@ public final class Rules {
         if(field.equals("Route stops")){try{RouteService.stops(value);}catch(Exception e){return "Choose 2–10 valid route stops";}}
         if (field.equals("Route type") && !value.equals(RouteService.TYPE) && !value.equals(RvRouting.TYPE) && !value.equals("GPX track") && !value.equals("GPX route") && !value.equals("Manual waypoints")) return "Invalid route type";
         if (field.toLowerCase(java.util.Locale.ROOT).contains("date")) {
-            try { LocalDate parsed=LocalDate.parse(value);if(field.equals("Availability checked date")&&parsed.isAfter(LocalDate.now()))return "Use today or an earlier checked date"; } catch (RuntimeException e) { return "Use a valid date: YYYY-MM-DD"; }
+            try { LocalDate parsed=LocalDate.parse(value);if((field.equals("Availability checked date")||field.equals("Last service date"))&&parsed.isAfter(LocalDate.now()))return "Use today or an earlier date"; } catch (RuntimeException e) { return "Use a valid date: YYYY-MM-DD"; }
         }
         if (isNumber(field)) {
             try {

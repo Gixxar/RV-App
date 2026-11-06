@@ -34,11 +34,16 @@ final class TripWorkflow {
         try{
             LogStore.Entry entry=find(store,Module.REMINDERS,id);String key=identify(entry.data,"Reminder ID");
             if(entry.data.optBoolean("done"))throw new IllegalArgumentException("Service already completed");
-            double current=store.latestMileage();
-            if(work!=null){put(work,"Source reminder ID",key);put(work,"Trip ID",entry.data.optString("Trip ID"));store.save(Module.MAINTENANCE,0,work);}
+            String schedule=identify(entry.data,"Schedule ID");
+            LocalDate serviced=work!=null&&!work.optString("Date").isEmpty()?LocalDate.parse(work.optString("Date")):LocalDate.now();
+            if(serviced.isAfter(LocalDate.now()))throw new IllegalArgumentException("Service date cannot be in the future");
+            double current=work!=null&&!work.optString("Odometer miles").isEmpty()?Double.parseDouble(work.optString("Odometer miles")):store.latestMileage();
+            if(!Double.isFinite(current)||current<0)throw new IllegalArgumentException("Enter valid service mileage");
+            put(entry.data,"Last service date",serviced.toString());put(entry.data,"Last service miles",String.valueOf(current));
+            if(work!=null){put(work,"Source reminder ID",key);put(work,"Schedule ID",schedule);put(work,"Trip ID",entry.data.optString("Trip ID"));store.save(Module.MAINTENANCE,0,work);}
             put(entry.data,"done",true);store.save(Module.REMINDERS,id,entry.data);
             int months=entry.data.optInt("Repeat months",0);double miles=entry.data.optDouble("Repeat miles",0);
-            if(months>0||miles>0){JSONObject next=new JSONObject(entry.data.toString());next.remove("Reminder ID");put(next,"done",false);put(next,"Due date",months>0?LocalDate.now().plusMonths(months).toString():"");put(next,"Due miles",miles>0?String.valueOf(current+miles):"");store.save(Module.REMINDERS,0,next);}
+            if(months>0||miles>0){JSONObject next=new JSONObject(entry.data.toString());next.remove("Reminder ID");put(next,"done",false);put(next,"Due date",months>0?serviced.plusMonths(months).toString():"");put(next,"Due miles",miles>0?String.valueOf(current+miles):"");store.save(Module.REMINDERS,0,next);}
             db.setTransactionSuccessful();
         }catch(org.json.JSONException e){throw new IllegalArgumentException(e);}finally{db.endTransaction();}
     }
