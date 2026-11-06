@@ -73,7 +73,7 @@ public final class MainActivity extends Activity {
         ImageView crest=new ImageView(this);crest.setImageResource(Personalisation.customName(this)?R.drawable.ic_rv:R.drawable.poulton_crest);crest.setContentDescription("RV logbook");crest.setScaleType(ImageView.ScaleType.FIT_CENTER);toolbar.addView(crest,new LinearLayout.LayoutParams(dp(30),dp(42)));
         LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setPadding(dp(10),0,0,0);toolbar.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
         TextView name=new TextView(this);name.setText(Personalisation.name(this));name.setTypeface(AdventureStyle.DISPLAY);name.setTextColor(AdventureStyle.CARD);name.setTextSize(17);brand.addView(name);
-        TextView sub=new TextView(this);sub.setText(R.string.app_subtitle);sub.setTextColor(0xffe1ebff);sub.setTextSize(12);brand.addView(sub);brand.setContentDescription("Edit logbook name and RV picture");brand.setOnClickListener(v->openPersonalisation());
+        TextView sub=new TextView(this);sub.setText(R.string.app_subtitle);sub.setTextColor(0xffe1ebff);sub.setTextSize(12);brand.addView(sub);brand.setContentDescription("Edit logbook name and RV picture");if(!form)brand.setOnClickListener(v->openPersonalisation());
         View divider=new View(this);divider.setBackgroundColor(AdventureStyle.BORDER);appRoot.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);appRoot.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(20),dp(20),dp(20),dp(28));scroll.addView(content);
