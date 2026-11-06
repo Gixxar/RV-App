@@ -306,6 +306,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
+        if(request==40&&result!=RESULT_OK&&selected==Module.CAMPSITES&&draft==null){list(Module.CAMPSITES);return;}
         if(request==45&&result==RESULT_OK&&data!=null&&selected==Module.CAMPSITES&&draft!=null){
             try{double lat=Double.parseDouble(data.getStringExtra("Latitude")),lon=Double.parseDouble(data.getStringExtra("Longitude"));if(!GeoData.valid(lat,lon))throw new IllegalArgumentException();collect();CampsiteLocations.set(draft,lat,lon,"Chosen on map — check entrance");inputs.get("Latitude").setText(draft.optString("Latitude"));inputs.get("Longitude").setText(draft.optString("Longitude"));}
             catch(Exception e){toast("Choose the campsite location again");}return;
