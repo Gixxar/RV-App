@@ -6,12 +6,14 @@ import android.graphics.drawable.Drawable;
 /** Simple, resolution-independent travel symbols for the dashboard. */
 final class LogbookIcon extends Drawable {
     private final Module module;
+    private final int color;
     private final Path symbol=new Path();
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-    LogbookIcon(Module module){this.module=module;}
+    LogbookIcon(Module module){this(module,AdventureStyle.accent(module));}
+    LogbookIcon(Module module,int color){this.module=module;this.color=color;}
     @Override public void draw(Canvas canvas) {
         symbol.reset();int saved=canvas.save();canvas.translate(getBounds().left,getBounds().top);canvas.scale(getBounds().width()/32f,getBounds().height()/32f);
-        p.setColor(AdventureStyle.GREEN);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);
+        p.setColor(color);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);
         switch(module) {
             case PLACES:
                 Path pin=symbol;pin.moveTo(16,30);pin.cubicTo(10,22,5,16,5,11);pin.cubicTo(5,-1,27,-1,27,11);pin.cubicTo(27,16,22,22,16,30);canvas.drawPath(pin,p);canvas.drawCircle(16,11,4,p);break;

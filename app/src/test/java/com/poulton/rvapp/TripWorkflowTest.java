@@ -68,6 +68,13 @@ public class TripWorkflowTest {
             android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(786,1704,android.graphics.Bitmap.Config.ARGB_8888);root.draw(new android.graphics.Canvas(bitmap));java.io.File output=new java.io.File("build/reports/tests/trip-dashboard.png");output.getParentFile().mkdirs();try(java.io.FileOutputStream out=new java.io.FileOutputStream(output)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}
             assertNotNull(LogbookTest.findButton(root,"Start trip"));assertNotNull(LogbookTest.findButton(root,"Departure checklist"));
         }
+        try(ActivityController<MainActivity> home=Robolectric.buildActivity(MainActivity.class).setup()){
+            for(String screen:new String[]{"home","records"}){
+                if(screen.equals("records"))LogbookTest.findButton(home.get().getWindow().getDecorView(),"Records").performClick();
+                android.view.View root=home.get().getWindow().getDecorView();root.measure(android.view.View.MeasureSpec.makeMeasureSpec(786,1073741824),android.view.View.MeasureSpec.makeMeasureSpec(1704,1073741824));root.layout(0,0,786,1704);
+                android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(786,1704,android.graphics.Bitmap.Config.ARGB_8888);root.draw(new android.graphics.Canvas(bitmap));try(java.io.FileOutputStream out=new java.io.FileOutputStream("build/reports/tests/colour-"+screen+".png")){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}
+            }
+        }
     }
     @Test public void recordWorkCancellationLeavesReminderPendingAndSaveLinksIt()throws Exception{
         try(LogStore s=new LogStore(context)){s.save(Module.REMINDERS,0,new JSONObject().put("Service","Oil service").put("Due miles","1").put("Repeat miles","100"));}
