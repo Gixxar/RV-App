@@ -113,8 +113,8 @@ public final class RoutePlannerActivity extends Activity {
     }
     private void savedStop(JSONObject target,Module module){
         List<LogStore.Entry> rows;try(LogStore store=new LogStore(this)){rows=store.list(module);}if(rows.isEmpty()){toast("No saved "+module.title.toLowerCase(Locale.ROOT)+" yet");return;}
-        String[] labels=new String[rows.size()];for(int i=0;i<labels.length;i++)labels[i]=rows.get(i).data.optString("Name")+(module==Module.CAMPSITES?" · search location":"");
-        new AlertDialog.Builder(this).setTitle(module.title).setItems(labels,(d,index)->{JSONObject row=rows.get(index).data;try{if(module==Module.PLACES)setStop(target,row.optString("Name"),row.getDouble("Latitude"),row.getDouble("Longitude"));else searchStop(target,row.optString("Name")+" "+row.optString("Address"));}catch(Exception e){toast("Choose this stop on the map instead");}}).setNegativeButton("Cancel",null).show();
+        String[] labels=new String[rows.size()];for(int i=0;i<labels.length;i++)labels[i]=rows.get(i).data.optString("Name")+(module==Module.CAMPSITES?(CampsiteLocations.position(rows.get(i).data)==null?" · search location":" · saved location"):"");
+        new AlertDialog.Builder(this).setTitle(module.title).setItems(labels,(d,index)->{JSONObject row=rows.get(index).data;try{if(module==Module.PLACES||CampsiteLocations.position(row)!=null)setStop(target,row.optString("Name"),row.getDouble("Latitude"),row.getDouble("Longitude"));else searchStop(target,row.optString("Name")+" "+row.optString("Address"));}catch(Exception e){toast("Choose this stop on the map instead");}}).setNegativeButton("Cancel",null).show();
     }
     private void searchStop(JSONObject target,String suggested){
         EditText input=new EditText(this);input.setSingleLine(true);input.setText(suggested);input.setHint("Town, postcode or address");

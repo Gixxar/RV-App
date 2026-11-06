@@ -86,6 +86,12 @@ public final class CampsiteImport {
             try{
                 JSONObject record=new JSONObject().put("Name",title).put("Notes",notes.toString());
                 String address=value(row,headers,"address");if(!address.isEmpty())record.put("Address",address);
+                String lat=value(row,headers,"latitude"),lon=value(row,headers,"longitude");
+                if(lat.isEmpty()&&lon.isEmpty()){lat=value(row,headers,"lat");lon=value(row,headers,"lng");if(lon.isEmpty())lon=value(row,headers,"lon");}
+                if(!lat.isEmpty()||!lon.isEmpty()){
+                    try{CampsiteLocations.set(record,Double.parseDouble(lat),Double.parseDouble(lon),"Imported coordinates — check entrance");}
+                    catch(IllegalArgumentException ex){throw new IOException("Invalid campsite coordinates in CSV row "+(i+1));}
+                }else{double[] point=CampsiteLocations.fromLink(url);if(point!=null)CampsiteLocations.set(record,point[0],point[1],"Google Maps link — check entrance");}
                 records.add(record);
             }catch(JSONException e){throw new IOException("Could not read this campsite.",e);}
         }

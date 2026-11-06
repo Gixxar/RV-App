@@ -13,12 +13,12 @@ public enum Module {
     FUEL("Fuel", new String[]{"Date", "Odometer miles", "Litres", "Cost GBP", "Station", "Notes"}),
     EXPENSES("Expenses", new String[]{"Date", "Category", "Cost GBP", "Description"}),
     MAINTENANCE("Maintenance", new String[]{"Work", "Date", "Odometer miles", "Cost GBP", "Provider", "Notes", "Source reminder ID", "Schedule ID"}),
-    CAMPSITES("Campsites", new String[]{"Name", "Address", "Arrival date", "Departure date", "Pitch", "Contact", "Facilities", "Max length m", "Max height m", "Max width m", "Max weight kg", "Availability", "Availability checked date", "Notes"}),
+    CAMPSITES("Campsites", new String[]{"Name", "Address", "Latitude", "Longitude", "Location source", "Arrival date", "Departure date", "Pitch", "Contact", "Facilities", "Max length m", "Max height m", "Max width m", "Max weight kg", "Availability", "Availability checked date", "Notes"}),
     PHOTOS("Photos", new String[]{"Caption", "Date", "Trip or campsite", "Notes"}),
     MILEAGE("Mileage", new String[]{"Date", "Odometer miles", "Notes"}),
     REMINDERS("Service reminders", new String[]{"Service", "Category", "Last service date", "Last service miles", "Repeat months", "Repeat miles", "Due date", "Due miles", "Notes", "Reminder ID", "Schedule ID"});
 
-    public static boolean hidden(String field) { return field.endsWith(" ID") || field.endsWith("checklist created"); }
+    public static boolean hidden(String field) { return field.equals("Location source") || field.endsWith(" ID") || field.endsWith("checklist created"); }
     public boolean isChecklist() { return this == CHECKS || this == ARRIVAL; }
     public boolean required(String field) {
         if(this==VEHICLE)return java.util.Arrays.asList(VehicleProfile.FIELDS).contains(field);
