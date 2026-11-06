@@ -64,16 +64,16 @@ public final class MainActivity extends Activity {
         super.onResume(); ServiceNotifications.refresh(this);
     }
     private void screen(String title) {
-        boolean dashboard=title.equals("The Poultons’ RV Logbook");
+        boolean dashboard=title.equals("Overview");
         boolean form=title.startsWith("Add: ")||title.startsWith("Edit: ");
         currentScreen=dashboard?"Overview":form?(editId==0?"New ":"Edit ")+singular(selected):title;
         appRoot=new LinearLayout(this);appRoot.setOrientation(LinearLayout.VERTICAL);appRoot.setBackgroundColor(AdventureStyle.PAPER);setContentView(appRoot);
         LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(6),dp(16),dp(6));toolbar.setBackground(AdventureStyle.vibrant(this,selected));appRoot.addView(toolbar);
         if(!dashboard){Button back=new Button(this);back.setText("‹");back.setTextSize(28);back.setTextColor(AdventureStyle.CARD);back.setBackgroundColor(android.graphics.Color.TRANSPARENT);back.setContentDescription("Back");toolbar.addView(back,new LinearLayout.LayoutParams(dp(44),dp(48)));back.setOnClickListener(v->{if(draft!=null)discardEditor();else if(!scopedTrip.isEmpty())finish();else home();});}
-        ImageView crest=new ImageView(this);crest.setImageResource(R.drawable.poulton_crest);crest.setContentDescription("The Poulton’s RV");crest.setScaleType(ImageView.ScaleType.FIT_CENTER);toolbar.addView(crest,new LinearLayout.LayoutParams(dp(30),dp(42)));
+        ImageView crest=new ImageView(this);crest.setImageResource(Personalisation.customName(this)?R.drawable.ic_rv:R.drawable.poulton_crest);crest.setContentDescription("RV logbook");crest.setScaleType(ImageView.ScaleType.FIT_CENTER);toolbar.addView(crest,new LinearLayout.LayoutParams(dp(30),dp(42)));
         LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setPadding(dp(10),0,0,0);toolbar.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
-        TextView name=new TextView(this);name.setText(R.string.brand_name);name.setTypeface(AdventureStyle.DISPLAY);name.setTextColor(AdventureStyle.CARD);name.setTextSize(17);brand.addView(name);
-        TextView sub=new TextView(this);sub.setText(R.string.app_subtitle);sub.setTextColor(0xffe1ebff);sub.setTextSize(12);brand.addView(sub);
+        TextView name=new TextView(this);name.setText(Personalisation.name(this));name.setTypeface(AdventureStyle.DISPLAY);name.setTextColor(AdventureStyle.CARD);name.setTextSize(17);brand.addView(name);
+        TextView sub=new TextView(this);sub.setText(R.string.app_subtitle);sub.setTextColor(0xffe1ebff);sub.setTextSize(12);brand.addView(sub);brand.setContentDescription("Edit logbook name and RV picture");brand.setOnClickListener(v->openPersonalisation());
         View divider=new View(this);divider.setBackgroundColor(AdventureStyle.BORDER);appRoot.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);appRoot.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(20),dp(20),dp(20),dp(28));scroll.addView(content);
@@ -108,9 +108,11 @@ public final class MainActivity extends Activity {
     }
     private void button(String label,Runnable action){Button b=makeButton(label,action);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(5),0,dp(5));content.addView(b,lp);}
     private void home(){
-        selected=null;draft=null;screen("The Poultons’ RV Logbook");
+        selected=null;draft=null;screen("Overview");
         TextView intro=text("Journeys, checklists and vehicle care.",14);intro.setTextColor(AdventureStyle.MUTED);
-        ImageView hero=new ImageView(this);hero.setImageResource(R.drawable.adventure_header);hero.setContentDescription("The Poulton’s RV Adventure Logbook");hero.setAdjustViewBounds(true);hero.setScaleType(ImageView.ScaleType.FIT_CENTER);hero.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,0));hero.setClipToOutline(true);LinearLayout.LayoutParams heroLp=new LinearLayout.LayoutParams(-1,-2);heroLp.setMargins(0,dp(8),0,dp(12));content.addView(hero,heroLp);
+        android.graphics.Bitmap rvPhoto=Personalisation.photo(this);
+        ImageView hero=new ImageView(this);if(rvPhoto!=null)hero.setImageBitmap(rvPhoto);else hero.setImageResource(Personalisation.customName(this)?R.drawable.ic_rv:R.drawable.adventure_header);hero.setContentDescription(Personalisation.name(this)+" · RV picture · tap to personalise");hero.setAdjustViewBounds(true);hero.setScaleType(ImageView.ScaleType.FIT_CENTER);hero.setBackground(AdventureStyle.panel(this,AdventureStyle.CARD,0));hero.setClipToOutline(true);LinearLayout.LayoutParams heroLp=new LinearLayout.LayoutParams(-1,rvPhoto!=null||Personalisation.customName(this)?dp(220):-2);heroLp.setMargins(0,dp(8),0,dp(12));content.addView(hero,heroLp);hero.setOnClickListener(v->openPersonalisation());
+        button("Personalise my logbook",this::openPersonalisation);
         LinearLayout stats=new LinearLayout(this);stats.setBaselineAligned(false);content.addView(stats);stat(stats,String.format(Locale.UK,"%,.0f",store.latestMileage()),"Odometer · miles");stat(stats,String.format(Locale.UK,"£%,.2f",store.totalCost()),"Recorded costs");
         int due=store.dueCount();Button service=makeButton(due==0?"Service reminders · all up to date":due+" service reminder(s) due · review",()->list(Module.REMINDERS));service.setTextColor(AdventureStyle.accent(Module.REMINDERS));service.setTextSize(14);service.setBackground(AdventureStyle.pressable(this,AdventureStyle.tint(Module.REMINDERS),0));LinearLayout.LayoutParams serviceLp=new LinearLayout.LayoutParams(-1,-2);serviceLp.setMargins(0,dp(8),0,0);content.addView(service,serviceLp);
         section("Your next journey",AdventureStyle.accent(Module.TRIPS));LinearLayout quick=new LinearLayout(this);quick.setBaselineAligned(false);content.addView(quick);tile(quick,Module.TRIPS,true);
@@ -123,7 +125,7 @@ public final class MainActivity extends Activity {
         section("Your data",AdventureStyle.accent(Module.PLACES));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.12 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("Personalise my logbook",this::openPersonalisation);button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.13 · "+Personalisation.name(this)+" · RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -306,6 +308,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
+        if(request==46){if(currentScreen.equals("Records"))recordsHub();else home();return;}
         if(request==40&&result!=RESULT_OK&&selected==Module.CAMPSITES&&draft==null){list(Module.CAMPSITES);return;}
         if(request==45&&result==RESULT_OK&&data!=null&&selected==Module.CAMPSITES&&draft!=null){
             try{double lat=Double.parseDouble(data.getStringExtra("Latitude")),lon=Double.parseDouble(data.getStringExtra("Longitude"));if(!GeoData.valid(lat,lon))throw new IllegalArgumentException();collect();CampsiteLocations.set(draft,lat,lon,"Chosen on map — check entrance");inputs.get("Latitude").setText(draft.optString("Latitude"));inputs.get("Longitude").setText(draft.optString("Longitude"));}
@@ -406,6 +409,7 @@ public final class MainActivity extends Activity {
             }
         } catch (Exception e) { new AlertDialog.Builder(this).setTitle("Backup could not be processed").setMessage(e.getMessage()==null?"Choose another file and try again.":e.getMessage()).setPositiveButton("Close",null).show(); }
     }
+    private void openPersonalisation(){startActivityForResult(new Intent(this,PersonalisationActivity.class),46);}
     private void openVehicle(){startActivityForResult(new Intent(this,VehicleProfileActivity.class),44);}
     private void openPlanner(long id){startActivityForResult(new Intent(this,RoutePlannerActivity.class).putExtra("id",id).putExtra("trip",scopedTrip),43);}
     private void campsiteImportHelp(){
