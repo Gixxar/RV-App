@@ -19,7 +19,7 @@ final class TripWorkflow {
             if(!((current.equals("Planned")&&status.equals("In progress"))||(current.equals("In progress")&&status.equals("Arrived"))||(current.equals("Arrived")&&status.equals("Finished"))))throw new IllegalArgumentException("Trip status changed; reopen the trip");
             if(status.equals("In progress"))snapshot(store,trip,"Departure",Module.CHECKS);
             if(status.equals("Arrived"))snapshot(store,trip,"Arrival",Module.ARRIVAL);
-            if(status.equals("Finished"))put(trip.data,"End date",LocalDate.now().toString());
+            if(status.equals("Finished")){if(!trip.data.optString("Date").isEmpty()&&LocalDate.parse(trip.data.optString("Date")).isAfter(LocalDate.now()))throw new IllegalArgumentException("Correct the trip start date before finishing");put(trip.data,"End date",LocalDate.now().toString());}
             put(trip.data,"Status",status);store.save(Module.TRIPS,trip.id,trip.data);db.setTransactionSuccessful();
         }finally{db.endTransaction();}
     }

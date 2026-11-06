@@ -59,4 +59,24 @@ public class TripWorkflowTest {
             assertNotNull(LogbookTest.findButton(a.getWindow().getDecorView(),"Not started"));LogbookTest.findButton(a.getWindow().getDecorView(),"Not started").performClick();assertNotNull(org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
         }
     }
+    @Test @Config(sdk=35,qualifiers="w393dp-h852dp-port-xhdpi") @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    public void nativeTripDashboardRendersAtPhoneSize()throws Exception{
+        String key;try(LogStore s=new LogStore(context)){key=addTrip(s,"Highlands adventure");LogStore.Entry trip=TripWorkflow.trip(s,key);trip.data.put("From","York").put("To","Fort William").put("Start miles","12000").put("End miles","12340");s.save(Module.TRIPS,trip.id,trip.data);s.save(Module.EXPENSES,0,new JSONObject().put("Date","2026-11-06").put("Cost GBP","65").put("Trip ID",key));}
+        try(ActivityController<TripDashboardActivity> c=Robolectric.buildActivity(TripDashboardActivity.class,new Intent(context,TripDashboardActivity.class).putExtra("trip",key)).setup()){
+            android.view.View root=c.get().getWindow().getDecorView();root.measure(android.view.View.MeasureSpec.makeMeasureSpec(786,1073741824),android.view.View.MeasureSpec.makeMeasureSpec(1704,1073741824));root.layout(0,0,786,1704);
+            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(786,1704,android.graphics.Bitmap.Config.ARGB_8888);root.draw(new android.graphics.Canvas(bitmap));java.io.File output=new java.io.File("build/reports/tests/trip-dashboard.png");output.getParentFile().mkdirs();try(java.io.FileOutputStream out=new java.io.FileOutputStream(output)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}
+            assertNotNull(LogbookTest.findButton(root,"Start trip"));assertNotNull(LogbookTest.findButton(root,"Departure checklist"));
+        }
+    }
+    @Test public void recordWorkCancellationLeavesReminderPendingAndSaveLinksIt()throws Exception{
+        try(LogStore s=new LogStore(context)){s.save(Module.REMINDERS,0,new JSONObject().put("Service","Oil service").put("Due miles","1").put("Repeat miles","100"));}
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class,new Intent(context,MainActivity.class).putExtra("module","REMINDERS")).setup()){
+            MainActivity a=c.get();android.widget.CheckBox check=findCheck(a.getWindow().getDecorView());check.performClick();AlertDialog dialog=(AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();LogbookTest.findButton(a.getWindow().getDecorView(),"Cancel").performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            try(LogStore s=new LogStore(context)){assertFalse(s.list(Module.REMINDERS).get(0).data.optBoolean("done"));assertEquals(0,s.list(Module.MAINTENANCE).size());}
+            findCheck(a.getWindow().getDecorView()).performClick();((AlertDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getButton(AlertDialog.BUTTON_NEUTRAL).performClick();c.recreate();a=c.get();LogbookTest.findButton(a.getWindow().getDecorView(),"Save").performClick();
+            try(LogStore s=new LogStore(context)){assertEquals(1,s.list(Module.MAINTENANCE).size());assertEquals(2,s.list(Module.REMINDERS).size());}
+        }
+    }
+    private static android.widget.CheckBox findCheck(android.view.View v){if(v instanceof android.widget.CheckBox)return(android.widget.CheckBox)v;if(v instanceof android.view.ViewGroup)for(int i=0;i<((android.view.ViewGroup)v).getChildCount();i++){android.widget.CheckBox c=findCheck(((android.view.ViewGroup)v).getChildAt(i));if(c!=null)return c;}return null;}
+
 }

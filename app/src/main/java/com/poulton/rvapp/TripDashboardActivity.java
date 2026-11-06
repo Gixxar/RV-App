@@ -10,7 +10,7 @@ import java.util.Locale;
 
 /** Per-trip overview. Template checklists stay independent of historical snapshots. */
 public final class TripDashboardActivity extends Activity {
-    private LogStore store;private String key;private LinearLayout body;
+    private LogStore store;private String key;private LinearLayout body;private String expandedPhase="";
     @Override public void onCreate(Bundle state){super.onCreate(state);store=new LogStore(this);key=getIntent().getStringExtra("trip");}
     @Override protected void onResume(){super.onResume();render();}
     private void label(String value,int size){TextView v=new TextView(this);v.setText(value);v.setTextSize(size);v.setTextColor(AdventureStyle.INK);v.setTypeface(size>=20?AdventureStyle.DISPLAY:AdventureStyle.BODY);v.setPadding(0,12,0,12);body.addView(v);}
@@ -18,6 +18,7 @@ public final class TripDashboardActivity extends Activity {
     private void render(){
         LogStore.Entry trip;try{trip=TripWorkflow.trip(store,key);}catch(RuntimeException e){finish();return;}
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);int pad=(int)(20*getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);body.setBackgroundColor(AdventureStyle.PAPER);scroll.addView(body);setContentView(scroll);
+        scroll.setOnApplyWindowInsetsListener((v,insets)->{if(android.os.Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=insets.getInsets(android.view.WindowInsets.Type.systemBars()|android.view.WindowInsets.Type.ime());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);}else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         label(trip.data.optString("Name"),28);String status=trip.data.optString("Status","Planned");label(status+" · "+trip.data.optString("Date"),16);label(trip.data.optString("From")+" → "+trip.data.optString("To"),18);
         double total=0;for(Module m:new Module[]{Module.FUEL,Module.EXPENSES,Module.MAINTENANCE})for(LogStore.Entry row:store.list(m))if(linked(row))total+=row.data.optDouble("Cost GBP",0);
         String distance="Mileage not yet recorded";if(!trip.data.optString("Start miles").isEmpty()&&!trip.data.optString("End miles").isEmpty())distance=String.format(Locale.UK,"%.1f miles",trip.data.optDouble("End miles")-trip.data.optDouble("Start miles"));label(distance+String.format(Locale.UK," · £%.2f recorded costs",total),16);
@@ -25,13 +26,13 @@ public final class TripDashboardActivity extends Activity {
         if(next!=null)button(next.equals("In progress")?"Start trip & departure checklist":next.equals("Arrived")?"Arrive & setup checklist":"Finish trip",()->{
             int attention=0,open=0;for(LogStore.Entry e:store.list(Module.TRIP_CHECKS))if(linked(e)){String s=e.data.optString("Status");if(s.equals("Needs attention"))attention++;if(!s.equals("Done")&&!s.equals("Not applicable"))open++;}
             String message=open>0?open+" checklist items remain unresolved ("+attention+" need attention). Continue?":"Change trip status to "+next+"?";
-            new AlertDialog.Builder(this).setMessage(message).setNegativeButton("Cancel",null).setPositiveButton("Continue",(d,w)->{try{TripWorkflow.advance(store,key,next);render();}catch(RuntimeException e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();render();}}).show();
+            new AlertDialog.Builder(this).setMessage(message).setNegativeButton("Cancel",null).setPositiveButton("Continue",(d,w)->{try{TripWorkflow.advance(store,key,next);expandedPhase=next.equals("In progress")?"Departure":next.equals("Arrived")?"Arrival":"";render();}catch(RuntimeException e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();render();}}).show();
         });
         for(String phase:new String[]{"Departure","Arrival"}){
             int all=0,done=0;for(LogStore.Entry e:store.list(Module.TRIP_CHECKS))if(linked(e)&&phase.equals(e.data.optString("Phase"))){all++;if(e.data.optString("Status").matches("Done|Not applicable"))done++;}
-            label(phase+" checklist · "+done+" / "+all,20);
+            final String section=phase;button(phase+" checklist · "+done+" / "+all+(expandedPhase.equals(phase)?" · hide":" · view"),()->{expandedPhase=expandedPhase.equals(section)?"":section;render();});
             if(all==0)label("Created when you "+(phase.equals("Departure")?"start the trip.":"mark arrival."),14);
-            for(LogStore.Entry e:store.list(Module.TRIP_CHECKS))if(linked(e)&&phase.equals(e.data.optString("Phase")))button(e.data.optString("Status")+" · "+e.data.optString("Item"),()->check(e));
+            for(LogStore.Entry e:store.list(Module.TRIP_CHECKS))if(expandedPhase.equals(phase)&&linked(e)&&phase.equals(e.data.optString("Phase")))button(e.data.optString("Status")+" · "+e.data.optString("Item"),()->check(e));
         }
         label("Trip records",22);
         for(Module m:new Module[]{Module.FUEL,Module.EXPENSES,Module.CAMPSITES,Module.PHOTOS,Module.MAINTENANCE,Module.REMINDERS,Module.PLANS,Module.PLACES,Module.ROUTES}){
