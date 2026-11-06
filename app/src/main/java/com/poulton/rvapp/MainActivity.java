@@ -52,6 +52,10 @@ public final class MainActivity extends Activity {
         } else if(state!=null && "Checklists".equals(state.getString("section"))) checksHub();
         else if(state!=null && "Records".equals(state.getString("section"))) recordsHub();
         else if(state!=null && "Backup & restore".equals(state.getString("section"))) backups();
+        else if(getIntent().getBooleanExtra("new_service",false)){selected=Module.REMINDERS;editor(new JSONObject(),0);}
+        else if(getIntent().hasExtra("record_service")||getIntent().hasExtra("edit_service")){
+            try{long id=getIntent().getLongExtra(getIntent().hasExtra("record_service")?"record_service":"edit_service",0);LogStore.Entry e=TripWorkflow.find(store,Module.REMINDERS,id);if(getIntent().hasExtra("record_service"))recordService(e);else{selected=Module.REMINDERS;editor(e.data,e.id);}}catch(RuntimeException e){toast("Service no longer exists");finish();}
+        }
         else if (getIntent().getBooleanExtra("show_reminders",false)) list(Module.REMINDERS);
         else if(getIntent().hasExtra("module"))list(Module.valueOf(getIntent().getStringExtra("module")));
         else home();
@@ -111,6 +115,7 @@ public final class MainActivity extends Activity {
         int due=store.dueCount();Button service=makeButton(due==0?"Service reminders · all up to date":due+" service reminder(s) due · review",()->list(Module.REMINDERS));service.setTextColor(AdventureStyle.accent(Module.REMINDERS));service.setTextSize(14);service.setBackground(AdventureStyle.pressable(this,AdventureStyle.tint(Module.REMINDERS),0));LinearLayout.LayoutParams serviceLp=new LinearLayout.LayoutParams(-1,-2);serviceLp.setMargins(0,dp(8),0,0);content.addView(service,serviceLp);
         section("Your next journey",AdventureStyle.accent(Module.TRIPS));LinearLayout quick=new LinearLayout(this);quick.setBaselineAligned(false);content.addView(quick);tile(quick,Module.TRIPS,true);
         Button map=makeButton("Travel map\nRoutes & visited places",()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));styleTile(map,Module.PLACES);LinearLayout.LayoutParams mapLp=new LinearLayout.LayoutParams(0,-2,1);mapLp.setMargins(dp(5),dp(4),0,dp(4));quick.addView(map,mapLp);
+        button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));
         button("Plan a route",()->openPlanner(0));
         section("Ready for the road",AdventureStyle.GREEN);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");
         section("Your logbook",AdventureStyle.accent(Module.PLANS));
@@ -118,7 +123,7 @@ public final class MainActivity extends Activity {
         section("Your data",AdventureStyle.accent(Module.PLACES));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);TextView footer=text("Saved on this device · Miles · Litres · GBP",12);footer.setTextColor(AdventureStyle.MUTED);footer.setGravity(android.view.Gravity.CENTER);
     }
     private void checksHub(){selected=null;draft=null;screen("Checklists");TextView note=text("One step closer to your next adventure.",14);note.setTextColor(AdventureStyle.MUTED);checklistProgress(Module.CHECKS,"Pre-trip inspection");checklistProgress(Module.ARRIVAL,"Arrival / setup");}
-    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.9 · The Poulton’s RV Logbook",12);}
+    private void recordsHub(){selected=null;draft=null;screen("Records");TextView note=text("Your trips, running costs and vehicle history.",14);note.setTextColor(AdventureStyle.MUTED);section("Journeys & places",AdventureStyle.accent(Module.TRIPS));moduleGrid(new Module[]{Module.TRIPS,Module.PLANS,Module.CAMPSITES,Module.PLACES,Module.ROUTES,Module.PHOTOS});section("Vehicle care",AdventureStyle.accent(Module.MAINTENANCE));button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));moduleGrid(new Module[]{Module.MAINTENANCE,Module.REMINDERS,Module.MILEAGE});section("Running costs",AdventureStyle.accent(Module.EXPENSES));moduleGrid(new Module[]{Module.FUEL,Module.EXPENSES});section("Settings & data",AdventureStyle.accent(Module.PLANS));button("My RV dimensions",this::openVehicle);button("Backup & restore",this::backups);text("Version 1.10 · The Poulton’s RV Logbook",12);}
     private void moduleGrid(Module[] areas){int columns=getResources().getConfiguration().fontScale>1.2f||getResources().getConfiguration().screenWidthDp<360?1:2;for(int i=0;i<areas.length;i+=columns){LinearLayout row=new LinearLayout(this);row.setBaselineAligned(false);content.addView(row);tile(row,areas[i],true);if(columns==2&&i+1<areas.length)tile(row,areas[i+1],false);}}
     private void checklistProgress(Module module,String label){
         int total=store.list(module).size();long done=store.list(module).stream().filter(e->e.data.optBoolean("done")).count();
@@ -173,6 +178,7 @@ public final class MainActivity extends Activity {
             renderChecklist(module);return;
         }
         if (module == Module.REMINDERS) {
+            button("Service schedule",()->startActivity(new Intent(this,ServiceScheduleActivity.class)));
             text("Due when either date or mileage is reached. Mileage uses your highest logged reading. Android checks approximately daily; battery settings may delay alerts.",16);
             button("Notification settings",this::notificationSettings);
         }
@@ -228,6 +234,10 @@ public final class MainActivity extends Activity {
             button("Open travel map",this::openMapFromEditor);
             button("Import GPX file",()->confirmGpxReplace());
         }
+        if(selected==Module.REMINDERS){
+            text("Set the last service date/mileage and repeat intervals, or enter the first due date/mileage directly. Date or mileage, whichever comes first. Use your manufacturer’s intervals; leave unknown history blank.",14);
+            button("Choose service name",()->new AlertDialog.Builder(this).setTitle("Service name only — set your own intervals").setItems(ServiceSchedule.SUGGESTIONS,(d,i)->inputs.get("Service").setText(ServiceSchedule.SUGGESTIONS[i])).setNegativeButton("Cancel",null).show());
+        }
         if(selected==Module.CAMPSITES)text("Enter the campsite’s maximum accepted RV dimensions and weight from its operator or listing. Leave unknown limits blank. Confirm entrance, turning space and pitch/awning room separately. Availability is a manual report, not a live booking check.",14);
         for (String field : selected.fields) {
             if(Module.hidden(field)||field.equals("Status")||field.equals("Route points")||field.equals("Route type"))continue;
@@ -247,10 +257,14 @@ public final class MainActivity extends Activity {
                 dateRow.addView(input,new LinearLayout.LayoutParams(0,-2,1));Button pick=makeButton("Pick date",()->pickDate(input));pick.setTextSize(13);LinearLayout.LayoutParams pickLp=new LinearLayout.LayoutParams(dp(86),-2);pickLp.setMargins(dp(8),0,0,0);dateRow.addView(pick,pickLp);
             }else content.addView(input);
             inputs.put(field,input);
+            if(selected==Module.REMINDERS&&field.equals("Category"))button("Choose service category",()->new AlertDialog.Builder(this).setItems(ServiceSchedule.CATEGORIES,(d,i)->input.setText(ServiceSchedule.CATEGORIES[i])).setNegativeButton("Cancel",null).show());
             if(field.equals("Availability"))button("Choose availability status",()->new AlertDialog.Builder(this).setTitle("Recorded pitch availability").setItems(VehicleProfile.AVAILABILITY,(d,index)->input.setText(VehicleProfile.AVAILABILITY[index])).setNegativeButton("Cancel",null).show());
 
 
         }
+        if(selected==Module.REMINDERS)button("Calculate next due from last service",()->{
+            collect();try{for(String field:new String[]{"Last service date","Last service miles","Repeat months","Repeat miles"}){String error=Rules.validate(field,draft.optString(field));if(error!=null)throw new IllegalArgumentException(field+": "+error);}ServiceSchedule.calculate(draft,true);for(String field:new String[]{"Due date","Due miles"})inputs.get(field).setText(draft.optString(field));toast("Due values calculated where a last service reading and interval are provided.");}catch(RuntimeException e){toast(e.getMessage());}
+        });
         if(java.util.Arrays.asList(selected.fields).contains("Trip ID")&&selected!=Module.TRIPS&&completingReminder==0){
             String name="Unlinked";for(LogStore.Entry trip:store.list(Module.TRIPS))if(draft.optString("Trip ID").equals(trip.data.optString("Trip ID")))name=trip.data.optString("Name");text("Trip: "+name,14);
             button("Choose trip",()->{collect();java.util.List<LogStore.Entry> trips=store.list(Module.TRIPS);String[] names=new String[trips.size()+1];names[0]="Unlinked";for(int i=0;i<trips.size();i++)names[i+1]=trips.get(i).data.optString("Name")+" · "+trips.get(i).data.optString("Date");new AlertDialog.Builder(this).setItems(names,(d,i)->{String key="";if(i>0){LogStore.Entry trip=trips.get(i-1);key=TripWorkflow.identify(trip.data,"Trip ID");store.save(Module.TRIPS,trip.id,trip.data);}put(draft,"Trip ID",key);editor(draft,editId);}).setNegativeButton("Cancel",null).show();});
@@ -276,13 +290,14 @@ public final class MainActivity extends Activity {
             if (error != null) { e.getValue().setError(error); invalid = true; }
         }
         if (invalid) return;
+        if(selected==Module.REMINDERS){try{ServiceSchedule.calculate(draft,false);for(String field:new String[]{"Due date","Due miles"})inputs.get(field).setText(draft.optString(field));}catch(RuntimeException e){toast("Check the last service date, mileage and intervals");return;}}
         Map<String,String> values = new LinkedHashMap<>();
         for (String field : selected.fields) values.put(field,draft.optString(field));
         String error = Rules.validateRecord(selected,values);
         if (error != null) { toast(error); return; }
         if (selected == Module.PHOTOS && draft.optString("uri").isEmpty()) { toast("Choose a photo first"); return; }
-        try { if(completingReminder!=0){TripWorkflow.complete(store,completingReminder,draft);completingReminder=0;selected=Module.REMINDERS;}else store.save(selected,editId,draft); ServiceNotifications.refresh(this); list(selected); }
-        catch (RuntimeException e) { toast("Could not save. Your form is still open; please retry."); }
+        try { if(completingReminder!=0){TripWorkflow.complete(store,completingReminder,draft);completingReminder=0;selected=Module.REMINDERS;}else store.save(selected,editId,draft); ServiceNotifications.refresh(this); if(serviceOrigin())finish();else list(selected); }
+        catch (RuntimeException e) { toast(e instanceof IllegalArgumentException?e.getMessage():"Could not save. Your form is still open; please retry."); }
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
@@ -324,8 +339,9 @@ public final class MainActivity extends Activity {
         else if(!scopedTrip.isEmpty())finish();
         else if (selected != null || !currentScreen.equals("Overview")) home(); else super.onBackPressed();
     }
+    private boolean serviceOrigin(){return getIntent().hasExtra("new_service")||getIntent().hasExtra("record_service")||getIntent().hasExtra("edit_service");}
     private void discardEditor() {
-        new AlertDialog.Builder(this).setMessage("Discard unsaved changes?").setNegativeButton("Keep editing",null).setPositiveButton("Discard",(d,w)->{if(completingReminder!=0){completingReminder=0;selected=Module.REMINDERS;}list(selected);}).show();
+        new AlertDialog.Builder(this).setMessage("Discard unsaved changes?").setNegativeButton("Keep editing",null).setPositiveButton("Discard",(d,w)->{if(completingReminder!=0){completingReminder=0;selected=Module.REMINDERS;}if(serviceOrigin())finish();else list(selected);}).show();
     }
     private int dp(int n) { return (int)(n*getResources().getDisplayMetrics().density); }
     private void completeReminder(LogStore.Entry entry) {

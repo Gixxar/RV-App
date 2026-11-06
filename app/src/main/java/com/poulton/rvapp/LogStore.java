@@ -50,7 +50,7 @@ public final class LogStore extends SQLiteOpenHelper {
     }
     public void save(Module module, long id, JSONObject data) {
         if(module==Module.TRIPS)TripWorkflow.identify(data,"Trip ID");
-        if(module==Module.REMINDERS)TripWorkflow.identify(data,"Reminder ID");
+        if(module==Module.REMINDERS){TripWorkflow.identify(data,"Reminder ID");TripWorkflow.identify(data,"Schedule ID");}
         ContentValues row = new ContentValues(); row.put("module", module.name()); row.put("data", data.toString());
         if (id == 0) getWritableDatabase().insertOrThrow("entries", null, row);
         else getWritableDatabase().update("entries", row, "id=? AND module=?", new String[]{String.valueOf(id), module.name()});
