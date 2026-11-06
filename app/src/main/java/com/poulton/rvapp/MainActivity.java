@@ -85,6 +85,7 @@ public final class MainActivity extends Activity {
     }
     private void bottomNavigation(boolean dashboard){
         LinearLayout nav=new LinearLayout(this);nav.setBackgroundColor(AdventureStyle.CARD);nav.setPadding(dp(10),dp(8),dp(10),dp(8));appRoot.addView(nav);
+        if(!scopedTrip.isEmpty()){navItem(nav,"Back to trip",Module.TRIPS,false,this::finish);return;}
         navItem(nav,"Home",Module.TRIPS,dashboard,this::home);
         navItem(nav,"Map",Module.PLACES,false,()->startActivityForResult(new Intent(this,TravelMapActivity.class),40));
         navItem(nav,"Checks",Module.CHECKS,(selected!=null&&selected.isChecklist())||currentScreen.equals("Checklists"),this::checksHub);

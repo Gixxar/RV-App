@@ -30,8 +30,9 @@ public class TripWorkflowTest {
         try(LogStore s=new LogStore(context)){
             String key=addTrip(s,"Trip");TripWorkflow.advance(s,key,"In progress");LogStore.Entry check=s.list(Module.TRIP_CHECKS).get(0);check.data.put("Status","Needs attention").put("Notes","Replace hose");s.save(Module.TRIP_CHECKS,check.id,check.data);
             s.save(Module.EXPENSES,0,new JSONObject().put("Date","2026-11-06").put("Cost GBP","25").put("Trip ID",key));
+            s.save(Module.PLACES,0,new JSONObject().put("Name","Camp").put("Latitude","51").put("Longitude","0").put("Trip ID",key));
             Backup.restore(s,Backup.exportRecords(s));LogStore.Entry trip=TripWorkflow.trip(s,key);trip.data.put("Name","Renamed");s.save(Module.TRIPS,trip.id,trip.data);
-            assertEquals(key,s.list(Module.EXPENSES).get(0).data.getString("Trip ID"));assertEquals("Needs attention",s.list(Module.TRIP_CHECKS).get(0).data.getString("Status"));assertEquals("Replace hose",s.list(Module.TRIP_CHECKS).get(0).data.getString("Notes"));assertEquals(24,s.list(Module.TRIP_CHECKS).size());
+            assertEquals("Renamed",TravelMapActivity.payload(s).getJSONArray("places").getJSONObject(0).getString("trip"));assertEquals(key,s.list(Module.EXPENSES).get(0).data.getString("Trip ID"));assertEquals("Needs attention",s.list(Module.TRIP_CHECKS).get(0).data.getString("Status"));assertEquals("Replace hose",s.list(Module.TRIP_CHECKS).get(0).data.getString("Notes"));assertEquals(24,s.list(Module.TRIP_CHECKS).size());
         }
     }
     @Test public void completionAndMaintenanceAreAtomicAndRetryDoesNotDuplicate()throws Exception{
