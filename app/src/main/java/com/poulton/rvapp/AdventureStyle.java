@@ -18,7 +18,7 @@ final class AdventureStyle {
         switch(module){
             case TRIPS:case MILEAGE:return 0xff2459bb;
             case PLANS:return 0xff6940bb;
-            case PLACES:case ROUTES:return 0xff007b83;
+            case PLACES:case ROUTES:return 0xff00757d;
             case CHECKS:case TRIP_CHECKS:return 0xff23754b;
             case ARRIVAL:return 0xff00786c;
             case FUEL:return 0xffa64b0c;
