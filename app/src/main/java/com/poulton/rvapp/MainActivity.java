@@ -203,7 +203,7 @@ public final class MainActivity extends Activity {
                 check.setOnCheckedChangeListener((v,done)->{
                     if (module == Module.REMINDERS && done) {
                         check.setOnCheckedChangeListener(null); check.setChecked(false);
-                        new AlertDialog.Builder(this).setTitle("Complete service?").setMessage("Mark this reminder completed? If a repeat interval is set, a new reminder will start from today and your current logged mileage. Choose Record work to save a linked maintenance entry and complete this reminder together.")
+                        new AlertDialog.Builder(this).setTitle("Complete service?").setMessage("Mark this reminder completed? A repeat will use the actual service date/mileage when recording work, or today and your current logged mileage when completing without a work record. Choose Record work to save a linked maintenance entry and complete this reminder together.")
                             .setNegativeButton("Cancel",(d,w)->list(module)).setNeutralButton("Record work",(d,w)->recordService(e)).setPositiveButton("Complete",(d,w)->completeReminder(e)).setOnCancelListener(d->list(module)).show();
                     } else { put(e.data,"done",done); store.save(module,e.id,e.data); ServiceNotifications.refresh(this); list(module); }
                 });

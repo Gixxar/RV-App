@@ -34,6 +34,9 @@ public class ServiceScheduleTest {
             Backup.restore(s,Backup.exportRecords(s));assertEquals(next.getString("Schedule ID"),s.list(Module.MAINTENANCE).get(0).data.getString("Schedule ID"));assertEquals(2,s.list(Module.REMINDERS).size());
         }
     }
+    @Test public void lastServiceMileageIsAReadingButFutureDueMileageIsNot()throws Exception{
+        try(LogStore s=new LogStore(context)){s.save(Module.REMINDERS,0,new JSONObject().put("Service","Oil").put("Due miles","30000").put("Last service miles","20000"));assertEquals(20000,s.latestMileage(),0);assertEquals(0,s.dueCount());s.save(Module.MILEAGE,0,new JSONObject().put("Date",LocalDate.now().toString()).put("Odometer miles","31000"));assertEquals(31000,s.latestMileage(),0);assertEquals(1,s.dueCount());}
+    }
     @Test public void futureServiceCompletionIsRejectedWithoutPartialWrites()throws Exception{
         try(LogStore s=new LogStore(context)){
             s.save(Module.REMINDERS,0,new JSONObject().put("Service","Inspect brakes").put("Due miles","100"));long id=s.list(Module.REMINDERS).get(0).id;

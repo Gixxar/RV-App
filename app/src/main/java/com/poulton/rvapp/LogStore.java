@@ -71,9 +71,9 @@ public final class LogStore extends SQLiteOpenHelper {
     }
     public double latestMileage() {
         double miles = 0;
-        for (Module m : new Module[]{Module.MILEAGE, Module.FUEL, Module.MAINTENANCE, Module.TRIPS})
+        for (Module m : new Module[]{Module.MILEAGE, Module.FUEL, Module.MAINTENANCE, Module.TRIPS, Module.REMINDERS})
             for (Entry e : list(m)) {
-                miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : "Odometer miles", 0));
+                miles = Math.max(miles, e.data.optDouble(m == Module.TRIPS ? "End miles" : m==Module.REMINDERS ? "Last service miles" : "Odometer miles", 0));
                 if (m == Module.TRIPS) miles = Math.max(miles,e.data.optDouble("Start miles",0));
             }
         return miles;
